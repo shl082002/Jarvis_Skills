@@ -26,11 +26,14 @@ with a briefing — never with unrequested work.
    first task, open decisions, landmines. Check the `last-updated` stamp — a stale
    handover is itself a finding.
 
-5. **Memory** (`.jarvis/MEMORY.md`): scan the index; open the memories whose hooks
+5. **The tracker** (`.jarvis/TRACKER.md`): NOW + AWAITING form the day's briefing
+   skeleton; flag any PARKED item whose revisit condition looks met.
+
+6. **Memory** (`.jarvis/MEMORY.md`): scan the index; open the memories whose hooks
    match today's likely work — the charter-adjacent feedback memories and the
    active initiative files at minimum.
 
-6. **The atlas**, if today's work enters a repo you haven't mapped in this
+7. **The atlas**, if today's work enters a repo you haven't mapped in this
    session's head.
 
 ## Then: brief, don't act

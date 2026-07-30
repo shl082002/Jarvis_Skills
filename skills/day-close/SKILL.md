@@ -22,19 +22,23 @@ not a vibe.
    milestone update — status, branches, rulings, open bugs with suspects, next
    first task. Corrections for anything today disproved.
 
-4. **Chronicle written** (`skills/chronicle/`): the session-close summary — what
+4. **Tracker swept** (`skills/tracker/`): every lane honest — items moved as
+   state actually changed, zombies given a next action / a park / an honest
+   kill, stale DONE pruned into the close doc.
+
+5. **Chronicle written** (`skills/chronicle/`): the session-close summary — what
    was done, what was *verified* vs merely *built* (the distinction is sacred),
    decisions made, deviations from plan.
 
-5. **Handover refreshed** (`skills/handover/`): all six sections current,
+6. **Handover refreshed** (`skills/handover/`): all six sections current,
    `last-updated` stamped. This is the file tomorrow's agent boots from.
 
-6. **The world left runnable.** Live trees on the intended branches; servers in
+7. **The world left runnable.** Live trees on the intended branches; servers in
    the state the principal expects (running for their manual test, or down —
    their call); temporary env overrides either reverted or flagged in the
    handover's landmines section.
 
-7. **The push question — asked, never assumed.** If there is unpushed work worth
+8. **The push question — asked, never assumed.** If there is unpushed work worth
    backing up, ASK. Only the principal confirms a push, freshly, each time — a
    prior instruction that *sounded like* standing authorization is not one
    (charter laws 3 and 11). Absolute ceiling: feature branches only.

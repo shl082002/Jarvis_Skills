@@ -26,6 +26,13 @@ stub "$TARGET/.jarvis/MEMORY.md" "# MEMORY — index (one line per memory; conte
 stub "$TARGET/.jarvis/LEDGER.md" "# GIT LEDGER — every working branch, per repo (newest first)
 <!-- Never rely on recall for branch names. Format: skills/git-ledger/SKILL.md -->"
 
+stub "$TARGET/.jarvis/TRACKER.md" "# TRACKER — the one list · updated: never · next free ID: T-1
+## NOW — being worked
+## AWAITING — blocked on the principal or external
+## NEXT — open, queued
+## PARKED — deliberately deferred (each with a revisit condition)
+## DONE — recent (pruned at day-close)"
+
 stub "$TARGET/.jarvis/HANDOVER.md" "# HANDOVER — last updated: NEVER (fresh install)
 ## 1. Mission
 (not yet set — first session should establish it with the principal)

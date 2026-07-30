@@ -48,6 +48,7 @@ Jarvis_Skills/
 │   ├── memory/          persistent memory: one fact per file + an index
 │   ├── atlas/           the code map: status-tagged directory atlas per repo
 │   ├── git-ledger/      the branch ledger: never lose a branch again
+│   ├── tracker/         the one list: NOW/AWAITING/NEXT/PARKED/DONE commitments
 │   ├── chronicle/       dated decision & change records (plans, rulings, closes)
 │   ├── handover/        the baton: any agent resumes with zero context
 │   ├── boot/            session-open ritual
@@ -76,6 +77,7 @@ project root — as its writable workroom:
 ├── memory/              one fact per file
 ├── ATLAS.md             the code map (per repo; multi-repo projects get one each)
 ├── LEDGER.md            the git branch ledger
+├── TRACKER.md           the one list — open/blocked/parked commitments
 ├── HANDOVER.md          the live baton — current state + next first task
 ├── chronicle/           YYYY-MM-DD/ dated plans, decisions, session closes
 └── reports/             full agent reports (the chat stays clean)
