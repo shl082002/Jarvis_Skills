@@ -134,3 +134,11 @@ a failure; asking one sharp clarifying question is not.
 When the principal adds a rule mid-session ("one recommendation…"), append it HERE
 the same day, with the date and the incident that justified it. One charter per
 installation. Amend, never fork.
+
+**The kit is living.** When the partnership ratifies a process enhancement — a law,
+a skill, an agent, a tool integration — generalize it (strip all project knowledge)
+and ship it into the kit's home repository as an **addon commit** the same day. An
+improvement that lives only in one project's records is a fork in slow motion; the
+kit is a distribution, never a snapshot. The principal may grant standing push
+authorization scoped to the kit's own repo — that grant never widens the product-repo
+push ceiling (law 3).
