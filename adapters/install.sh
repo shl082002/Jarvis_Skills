@@ -16,9 +16,22 @@ fi
 echo "Installing Jarvis Skills ($HARNESS) into: $TARGET"
 
 # ---- The workroom (all harnesses) -------------------------------------------
-mkdir -p "$TARGET/.jarvis/memory" "$TARGET/.jarvis/chronicle" "$TARGET/.jarvis/reports"
+mkdir -p "$TARGET/.jarvis/memory" "$TARGET/.jarvis/chronicle" "$TARGET/.jarvis/reports" \
+         "$TARGET/.jarvis/bin" "$TARGET/.jarvis/logs" "$TARGET/.jarvis/run"
 
 stub() { [[ -f "$1" ]] || printf '%s\n' "$2" > "$1"; }
+
+# svc butler script is kit-owned code — refreshed on every install
+cp "$KIT/bin/svc" "$TARGET/.jarvis/bin/svc"
+chmod +x "$TARGET/.jarvis/bin/svc"
+
+stub "$TARGET/.jarvis/services.yml" "# services.yml — HAPPY's service registry (format: skills/services/SKILL.md)
+# example-service:
+#   dir: path/from/workspace/root
+#   cmd: venv/bin/uvicorn app.main:app --port 8000
+#   port: 8000
+#   health: http://localhost:8000/health
+#   notes: contested ports, env requirements, sharp edges"
 
 stub "$TARGET/.jarvis/MEMORY.md" "# MEMORY — index (one line per memory; content lives in memory/)
 <!-- - [Title](memory/file.md) — hook for when to open it -->"

@@ -1,0 +1,190 @@
+#!/usr/bin/env bash
+# svc — the workshop service butler (HAPPY's muscle).
+#
+# Registry: <workspace>/.jarvis/services.yml — strict two-level format:
+#
+#   service-name:
+#     dir: path/relative/to/workspace/root
+#     cmd: single shell command, run from dir, backgrounded, logs captured
+#     stop: optional command run from dir instead of pid-kill (docker etc.)
+#     port: 8000
+#     health: http://localhost:8000/health   (optional; TCP check otherwise)
+#     wait: 60                               (optional boot budget, seconds)
+#     notes: free text (optional)
+#
+# Usage:
+#   svc list                      registry overview
+#   svc status [name]             live state of one/all services
+#   svc up <name>                 start + wait for health
+#   svc down <name>               stop (pidfile → port listener, cwd-guarded)
+#   svc restart <name>            down + up
+#   svc logs <name> [n]           tail the captured log (default 50 lines)
+#
+# Laws (skills/services/SKILL.md): status before up · never kill a process
+# you can't name · a foreign port-holder is REPORTED, never killed · UP means
+# health passed, not "a process exists".
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+REG="$ROOT/.jarvis/services.yml"
+LOGS="$ROOT/.jarvis/logs"
+RUNDIR="$ROOT/.jarvis/run"
+mkdir -p "$LOGS" "$RUNDIR"
+
+# Non-interactive shells miss user tool dirs (bun, homebrew, local bins) —
+# and some shell profiles even drop the system dirs. Make the PATH bulletproof.
+export PATH="$HOME/.bun/bin:$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+
+die() { echo "svc: $*" >&2; exit 1; }
+[[ -f "$REG" ]] || die "registry not found: $REG"
+
+names() { awk '/^[A-Za-z0-9_-]+:[[:space:]]*$/ { sub(":[[:space:]]*$", ""); print }' "$REG"; }
+
+field() { # field <service> <key> — value preserved verbatim after "key: "
+  awk -v s="$1" -v k="$2" '
+    $0 ~ "^"s":[[:space:]]*$"            { in_s = 1; next }
+    /^[A-Za-z0-9_-]+:[[:space:]]*$/      { in_s = 0 }
+    in_s && $0 ~ "^[[:space:]]+"k":"     { sub("^[[:space:]]+"k":[[:space:]]*", ""); print; exit }
+  ' "$REG"
+}
+
+known() { names | grep -qx "$1"; }
+
+port_pid() { lsof -nP -tiTCP:"$1" -sTCP:LISTEN 2>/dev/null | head -1; }
+
+pid_cmd() { ps -p "$1" -o command= 2>/dev/null | cut -c1-90; }
+
+pid_cwd() { lsof -a -p "$1" -d cwd -Fn 2>/dev/null | awk '/^n/ { print substr($0, 2); exit }'; }
+
+health_ok() { # health_ok <service> — 0 if healthy; health URL first, TCP fallback
+  local url port
+  url="$(field "$1" health)"; port="$(field "$1" port)"
+  if [[ -n "$url" ]]; then curl -sf --max-time 4 -o /dev/null "$url"
+  else [[ -n "$(port_pid "$port")" ]]; fi
+}
+
+status_one() {
+  local name="$1" port pid
+  port="$(field "$name" port)"
+  pid="$(port_pid "$port")"
+  if [[ -z "$pid" ]]; then
+    printf "○ %-26s DOWN        :%s\n" "$name" "$port"
+  elif health_ok "$name"; then
+    printf "● %-26s UP healthy  :%-5s pid %-6s %s\n" "$name" "$port" "$pid" "$(pid_cmd "$pid")"
+  else
+    printf "◐ %-26s LISTENING   :%-5s pid %-6s %s  (health check FAILED)\n" \
+      "$name" "$port" "$pid" "$(pid_cmd "$pid")"
+  fi
+}
+
+cmd_list() {
+  printf "%-26s %-6s %s\n" "SERVICE" "PORT" "DIR"
+  local n
+  for n in $(names); do
+    printf "%-26s :%-5s %s\n" "$n" "$(field "$n" port)" "$(field "$n" dir)"
+    local notes; notes="$(field "$n" notes)"
+    [[ -n "$notes" ]] && printf "%-26s %-6s ↳ %s\n" "" "" "$notes"
+  done
+}
+
+cmd_status() {
+  if [[ -n "${1:-}" && "$1" != "all" ]]; then
+    known "$1" || die "unknown service '$1' (svc list)"
+    status_one "$1"
+  else
+    local n; for n in $(names); do status_one "$n"; done
+  fi
+}
+
+cmd_up() {
+  local name="${1:?usage: svc up <name>}"
+  known "$name" || die "unknown service '$name' (svc list)"
+  local dir port waits pid
+  dir="$ROOT/$(field "$name" dir)"; port="$(field "$name" port)"
+  waits="$(field "$name" wait)"; waits="${waits:-60}"
+  [[ -d "$dir" ]] || die "service dir missing: $dir"
+
+  pid="$(port_pid "$port")"
+  if [[ -n "$pid" ]]; then
+    echo "svc: :$port already held by pid $pid — $(pid_cmd "$pid")"
+    echo "svc: refusing to double-start '$name'. If that holder is wrong, 'svc down' the service that owns it."
+    return 1
+  fi
+
+  local start; start="$(field "$name" cmd)"
+  [[ -n "$start" ]] || die "no cmd registered for '$name'"
+  echo "svc: starting $name — ($start) in $dir"
+  ( cd "$dir" && nohup bash -c "$start" >"$LOGS/$name.log" 2>&1 & echo $! >"$RUNDIR/$name.pid" )
+
+  local deadline=$(( SECONDS + waits ))
+  while (( SECONDS < deadline )); do
+    if health_ok "$name"; then status_one "$name"; return 0; fi
+    sleep 2
+  done
+  echo "svc: BOOT TIMEOUT — '$name' not healthy after ${waits}s. Last log lines:"
+  tail -n 15 "$LOGS/$name.log" 2>/dev/null | sed 's/^/    /'
+  status_one "$name"
+  return 1
+}
+
+cmd_down() {
+  local name="${1:?usage: svc down <name>}"
+  known "$name" || die "unknown service '$name' (svc list)"
+  local dir port stop pid
+  dir="$ROOT/$(field "$name" dir)"; port="$(field "$name" port)"
+  stop="$(field "$name" stop)"
+
+  if [[ -n "$stop" ]]; then
+    echo "svc: stopping $name — ($stop) in $dir"
+    ( cd "$dir" && bash -c "$stop" )
+  else
+    # Prefer the pid we launched; verify it is still that process.
+    pid=""
+    if [[ -f "$RUNDIR/$name.pid" ]]; then
+      pid="$(cat "$RUNDIR/$name.pid")"
+      kill -0 "$pid" 2>/dev/null || pid=""
+    fi
+    if [[ -n "$pid" ]]; then
+      echo "svc: TERM pid $pid — $(pid_cmd "$pid")"
+      kill -TERM "$pid" 2>/dev/null || true
+    fi
+    # Then the port listener — but only if it belongs to this service's dir.
+    local i lpid
+    for i in 1 2 3 4 5; do
+      lpid="$(port_pid "$port")"; [[ -z "$lpid" ]] && break
+      local cwd; cwd="$(pid_cwd "$lpid")"
+      if [[ "$cwd" != "$dir"* ]]; then
+        echo "svc: :$port listener pid $lpid runs from '$cwd' — NOT $name's dir. Refusing to kill a foreign process."
+        return 1
+      fi
+      echo "svc: TERM listener pid $lpid — $(pid_cmd "$lpid")"
+      kill -TERM "$lpid" 2>/dev/null || true
+      sleep 2
+    done
+    lpid="$(port_pid "$port")"
+    if [[ -n "$lpid" && "$(pid_cwd "$lpid")" == "$dir"* ]]; then
+      echo "svc: KILL pid $lpid (did not exit on TERM)"
+      kill -KILL "$lpid" 2>/dev/null || true
+      sleep 1
+    fi
+  fi
+  rm -f "$RUNDIR/$name.pid"
+  status_one "$name"
+}
+
+cmd_logs() {
+  local name="${1:?usage: svc logs <name> [n]}"
+  known "$name" || die "unknown service '$name' (svc list)"
+  [[ -f "$LOGS/$name.log" ]] || die "no captured log for '$name' (started outside svc?)"
+  tail -n "${2:-50}" "$LOGS/$name.log"
+}
+
+case "${1:-}" in
+  list)    cmd_list ;;
+  status)  cmd_status "${2:-}" ;;
+  up)      cmd_up "${2:-}" ;;
+  down)    cmd_down "${2:-}" ;;
+  restart) cmd_down "${2:-}" && cmd_up "${2:-}" ;;
+  logs)    cmd_logs "${2:-}" "${3:-}" ;;
+  *)       sed -n '2,25p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 1 ;;
+esac

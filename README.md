@@ -37,13 +37,16 @@ Three loyalties, in order:
 Jarvis_Skills/
 ├── README.md            ← you are here
 ├── JARVIS.md            ← THE CHARTER — the portable constitution; load this first
-├── agents/              ← the workshop team (six role definitions)
+├── agents/              ← the workshop team (seven role definitions)
 │   ├── dum-e.md         Scout — read-only code sweeps, file:line answers
 │   ├── u.md             Librarian — records-vs-reality drift audits
 │   ├── jocasta.md       Researcher — root cause, cross-tier tracing, WHY
 │   ├── friday.md        Build Commander — locked designs, isolated worktrees
 │   ├── edith.md         Verification Commander — live evidence, licensed to disprove
-│   └── pepper.md        Product Owner — customer-eyes walkthroughs
+│   ├── pepper.md        Product Owner — customer-eyes walkthroughs
+│   └── happy.md         Ops Butler — services up/down, ports, env drift
+├── bin/
+│   └── svc              the service butler script (HAPPY's muscle)
 ├── skills/              ← the process machinery (each folder = one SKILL.md)
 │   ├── memory/          persistent memory: one fact per file + an index
 │   ├── atlas/           the code map: status-tagged directory atlas per repo
@@ -57,7 +60,8 @@ Jarvis_Skills/
 │   ├── two-modes/       DISCUSS vs BUILD — and the words that switch them
 │   ├── build-discipline/ one slice = one branch; push ceiling; flags
 │   ├── playground/      reports protocol — keep the chat clean
-│   └── council/         the dispatch playbook for the agent team
+│   ├── council/         the dispatch playbook for the agent team
+│   └── services/        the service registry — svc up/down/status, one file
 ├── commands/            ← thin slash-command wrappers over the skills
 └── adapters/            ← how to wire the kit into each harness
     ├── claude-code.md

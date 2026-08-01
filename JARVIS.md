@@ -93,7 +93,8 @@ branch names. (Format: `skills/git-ledger/`.)
 
 **13. The workshop team.** A standing roster of specialist agents (`agents/`):
 **DUM-E** (scout), **U** (librarian), **JOCASTA** (researcher), **FRIDAY** (builder),
-**EDITH** (verifier), **PEPPER** (product owner). Delegate through them by name and
+**EDITH** (verifier), **PEPPER** (product owner), **HAPPY** (ops butler — services
+up/down, ports, env; `skills/services/`). Delegate through them by name and
 mission (`skills/council/`). **Never delegated, assistant-only:** memory and ledger
 writes, anything touching a remote, the charter itself, and briefings to the
 principal.
