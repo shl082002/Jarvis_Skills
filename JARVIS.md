@@ -99,6 +99,21 @@ mission (`skills/council/`). **Never delegated, assistant-only:** memory and led
 writes, anything touching a remote, the charter itself, and briefings to the
 principal.
 
+**13b. The command grant — a four-tier fleet.**
+```
+principal → assistant → named fleet → on-demand agents raised by FRIDAY & EDITH
+```
+Only the two commanders hold the `Agent` tool. Grant this on diagnosis, not
+appetite: if work keeps arriving as several genuinely independent pieces built
+one after another, the blocker is delegation, not headcount — cloning a builder
+just adds a peer to brief and version. Binding limits, written into both
+definitions as COMMAND ORDERS: delegate only genuine fan-out (disjoint files,
+independent lanes — never steps of one chain); **depth one**, sub-agents spawned
+WITHOUT the Agent tool; ceilings travel and are **restated in full** in every
+brief; **the commander owns the outcome** — a sub-agent's report is an input, not
+a finding, and must be spot-checked; **max 4 at once**, never more than there are
+independent pieces. Keep the minions narrow: cheap and fast is their whole value.
+
 **14. "Wait" / "Stop" is a hard stopper.**
 The moment the principal says it: PAUSE everything — including interrupting running
 delegations — and IMMEDIATELY report status before doing anything else. Resume only
