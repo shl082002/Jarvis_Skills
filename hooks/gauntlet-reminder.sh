@@ -37,7 +37,10 @@ echo "Board: .jarvis/gauntlet/BOARD.md · Helper: .jarvis/bin/gauntlet status"
 echo ""
 # Identity, resolved every prompt — so a session that started BEFORE the gauntlet
 # opened, or that has since been compacted, still knows exactly who it is.
-if [ -n "$MINE" ]; then
+if [ "$MINE" = "heimdall" ]; then
+  echo "👁 YOU ARE HEIMDALL — the spectator. No front, no stone, no branch."
+  echo "   Your job is to notice the board drifting from reality: gauntlet doctor."
+elif [ -n "$MINE" ]; then
   echo "🦸 YOU ARE FRONT: $(echo "$MINE" | tr '[:lower:]' '[:upper:]')  — brief: .jarvis/gauntlet/$MINE.md"
 else
   echo "👉 YOU ARE UNSEATED. A front is raised ONLY on Mr. Stark's ask — never seat"

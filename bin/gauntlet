@@ -8,6 +8,9 @@
 #   gauntlet stones               who bears what, with lease clocks
 #   gauntlet take <stone> <front> [mins] ["why"]    claim a stone (exclusive)
 #   gauntlet release <stone>      release a stone
+#   gauntlet push-ok "<why>"      open a ONE-SHOT push grant (law 17): one push, 10 minutes,
+#                                 consumed on use. Only on the principal's fresh ask.
+#   gauntlet push-log             the audit trail — every granted push, in order
 #   gauntlet summon <name> ["character"] [none|burst|heavy] ["territory"] [order]
 #                                 raise a front and write its brief — named NOW, from the work
 #   gauntlet front <name>         print a front's cold-boot brief
@@ -222,6 +225,27 @@ cmd_release() {
   local cur; cur=$(head -n1 "$STONES/$s" 2>/dev/null || true)
   : > "$STONES/$s" 2>/dev/null
   say "$(stone_icon "$s") $(echo "$s" | tr '[:lower:]' '[:upper:]') released${cur:+ (was: $(echo "$cur" | cut -d'|' -f1))} — now free."
+}
+
+# ── 🟣 POWER: the one-shot push grant (charter law 17) ────────────────────────
+# The grant is a TOKEN, not a mode. hooks/guard-push-ssh.sh deletes it before the
+# push runs, so "approved once" can never become "approved from now on". Open one
+# ONLY on the principal's fresh ask — never pre-emptively, never for a batch.
+cmd_push_ok() {
+  local why="${*:-}"
+  [ -z "$why" ] && { say "usage: gauntlet push-ok \"<what is being pushed and why>\""; exit 1; }
+  mkdir -p "$RUN"
+  printf '%s\n' "$why" > "$RUN/PUSH_GRANT"
+  say "${c_grn}🟣 PUSH GRANT OPEN${c_off} — ${why}"
+  say "   ONE push · expires in 10 minutes · consumed on use."
+  say "   Mainline and force-pushes stay refused even with this open."
+}
+
+cmd_pushlog() {
+  local f="$RUN/push-log"
+  [ -s "$f" ] || { say "no pushes recorded yet"; return; }
+  say "PUSH LOG — every granted push, in order"
+  cat "$f"
 }
 
 cmd_summon() {
@@ -450,6 +474,8 @@ case "${1:-status}" in
   stones)  cmd_stones ;;
   take)    shift; cmd_take "$@" ;;
   release) shift; cmd_release "$@" ;;
+  push-ok) shift; cmd_push_ok "$@" ;;
+  push-log) cmd_pushlog ;;
   summon)  shift; cmd_summon "$@" ;;
   front)   shift; cmd_front "$@" ;;
   enlist)  shift; cmd_enlist "$@" ;;
@@ -459,5 +485,7 @@ case "${1:-status}" in
   unbind)  shift; cmd_unbind "$@" ;;
   bases)   cmd_bases ;;
   doctor)  cmd_doctor ;;
-  *)       sed -n '2,19p' "$0" | sed 's/^# \?//' ;;
+  # Help = the whole leading comment block, so a new command is documented by
+  # adding one line up top (a fixed line range silently truncated it before).
+  *)       awk 'NR>1 && /^#/ {sub(/^# ?/, ""); print; next} NR>1 {exit}' "$0" ;;
 esac

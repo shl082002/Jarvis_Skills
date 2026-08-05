@@ -89,6 +89,33 @@ that silently errored on every use.
   **Test it, don't assume:** run a command that is in neither list. If it runs
   without a prompt, `ask` is inert in that session, and anything you need gated must
   go in `deny` instead.
+- **The one-shot grant — how to gate a push without a prompt.** Once you accept a
+  blanket `Bash` allow (the only way to stop routine prompting), no `ask` can fire.
+  Build the gate out of `deny` + a token instead, in a `PreToolUse` Bash hook:
+  1. hook denies **all** pushes by default;
+  2. it first hard-denies mainline and force **before** looking at any token, so a
+     grant can never escalate;
+  3. otherwise it looks for a grant file, checks its age against a short TTL,
+     **deletes it**, appends an audit line, and exits silently so the blanket allow
+     runs the command;
+  4. a tiny CLI (`… push-ok "<why>"`) writes the grant when the principal asks.
+
+  Deleting the token before the command runs is what makes it one-shot: the grant
+  cannot survive to a second push even if the first fails. A session-wide grant
+  becomes impossible by construction, which is stronger than any rule. Keep an
+  audit log — it is the only record that each push had an ask behind it.
+- **⚠ The bare-push hole — check for this in ANY branch-protection you write.**
+  `git push` with no refspec targets the current branch's upstream, so **the
+  protected branch name never appears in the command string** and pure text
+  matching cannot see it. Found live 5 Aug 2026: a bare push from a
+  `development`-tracking tree walked straight through a gate that correctly
+  refused `git push origin development`. The fix: when no refspec is named,
+  resolve the real destination — `git -C <dir> rev-parse --abbrev-ref HEAD` and
+  `… --symbolic-full-name @{u}` — and judge *that*. Work out `<dir>` from
+  `git -C <path>`, a leading `cd <path>`, or the hook payload's `cwd`; if it
+  cannot be resolved, **refuse rather than guess**. Also judge the right-hand
+  side of `src:dst` refspecs, strip `refs/heads/` and a leading `+`, and cover
+  `-u` / `--set-upstream`. Every one of those is a separate way in.
   ```jsonc
   "permissions": {
     "allow": ["Bash"],                        // the routine: everything not named below

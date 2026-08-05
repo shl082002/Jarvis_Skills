@@ -138,10 +138,14 @@ principal to approve without reading, which is how the one prompt that mattered 
 waved through. So: **allow broadly, and spend the whole permission budget on the few
 actions with consequences outside this laptop.** Three tiers:
 - **ALLOW — everything routine.** Read, build, test, local git, scripts. No prompt.
-- **ASK — every single time, never grantable for a session:** **any push** and **any
-  remote shell** (ssh/scp/sftp/rsync). Ten pushes in a day is fine; ten *asks* is the
-  point. "Approved once" must never become "approved from now on" for these two —
-  a session-wide grant here is the failure mode, not the convenience.
+- **ONE-SHOT GRANT — the push gate.** Ten pushes in a day is fine; ten *asks* is the
+  point. "Approved once" must never become "approved from now on". Measured truth:
+  a blanket allow outranks every `ask`, from rules **and** from hooks — so an "ask"
+  tier cannot be built on a promptless setup. Build it as a **token instead**: the
+  principal asks → you open a grant naming what and why → the push **consumes** it.
+  One grant, one push, short expiry, every grant logged. A session-wide grant then
+  becomes impossible by construction rather than by policy. Remote shells get no
+  grant path at all — the principal runs those.
 - **DENY — never, no prompt:** mainline pushes (main/master/dev/development),
   force-pushes in every spelling, `sudo`.
 
