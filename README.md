@@ -61,7 +61,8 @@ Jarvis_Skills/
 │   ├── build-discipline/ one slice = one branch; push ceiling; flags
 │   ├── playground/      reports protocol — keep the chat clean
 │   ├── council/         the dispatch playbook for the agent team
-│   └── services/        the service registry — svc up/down/status, one file
+│   ├── services/        the service registry — svc up/down/status, one file
+│   └── gauntlet/        several sessions in parallel: fronts, stones, the Collect
 ├── commands/            ← thin slash-command wrappers over the skills
 └── adapters/            ← how to wire the kit into each harness
     ├── claude-code.md

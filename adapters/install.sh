@@ -21,9 +21,13 @@ mkdir -p "$TARGET/.jarvis/memory" "$TARGET/.jarvis/chronicle" "$TARGET/.jarvis/r
 
 stub() { [[ -f "$1" ]] || printf '%s\n' "$2" > "$1"; }
 
-# svc butler script is kit-owned code — refreshed on every install
+# Butler scripts are kit-owned code — refreshed on every install.
 cp "$KIT/bin/svc" "$TARGET/.jarvis/bin/svc"
-chmod +x "$TARGET/.jarvis/bin/svc"
+cp "$KIT/bin/gauntlet" "$TARGET/.jarvis/bin/gauntlet"
+chmod +x "$TARGET/.jarvis/bin/svc" "$TARGET/.jarvis/bin/gauntlet"
+
+# NB: no gauntlet.repos stub on purpose — with no config the gauntlet auto-detects
+# sibling git repos and their dev lines. Write one only to override that.
 
 stub "$TARGET/.jarvis/services.yml" "# services.yml — HAPPY's service registry (format: skills/services/SKILL.md)
 # example-service:
@@ -76,9 +80,14 @@ case "$HARNESS" in
       mkdir -p "$TARGET/.claude/skills/$name"
       cp "$d/SKILL.md" "$TARGET/.claude/skills/$name/SKILL.md"
     done
-    echo "  + .claude/{agents,commands,skills} populated"
+    mkdir -p "$TARGET/.claude/hooks"
+    cp "$KIT/hooks/"*.sh "$TARGET/.claude/hooks/"
+    chmod +x "$TARGET/.claude/hooks/"*.sh
+    echo "  + .claude/{agents,commands,skills,hooks} populated"
     echo "  ! Add the charter pointer to CLAUDE.md (see adapters/claude-code.md)"
     echo "  ! New agent types may need a session restart to register"
+    echo "  ! Hooks are COPIED but not WIRED — paste the settings.json block from"
+    echo "    adapters/claude-code.md (§ Hooks) to arm gauntlet auto-summon"
     ;;
   cursor)
     mkdir -p "$TARGET/.cursor/rules"

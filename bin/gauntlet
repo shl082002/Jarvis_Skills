@@ -1,0 +1,463 @@
+#!/bin/bash
+# gauntlet — control for charter law 19: several sessions, own worktrees, one stack.
+# Makes the practice executable instead of documentary. No deps beyond git.
+#
+#   gauntlet status               the board: WHERE? · ALIVE? · NEEDS YOU? + stones + drift
+#   gauntlet open "<reason>"      open a gauntlet (broadcasts to every session via the hook)
+#   gauntlet close                archive the board, clear the stones, hand off to the Collect
+#   gauntlet stones               who bears what, with lease clocks
+#   gauntlet take <stone> <front> [mins] ["why"]    claim a stone (exclusive)
+#   gauntlet release <stone>      release a stone
+#   gauntlet summon <name> ["character"] [none|burst|heavy] ["territory"] [order]
+#                                 raise a front and write its brief — named NOW, from the work
+#   gauntlet front <name>         print a front's cold-boot brief
+#   gauntlet enlist <name> [...]  ★ ON HIS ASK: turn THIS session — new or already
+#                                 running — into a front. Raises it if new, seats you.
+#   gauntlet seats                who mans which front (auto-summon claims)
+#   gauntlet assign <name> "<task>"   write Mr. Stark's task into a front's brief
+#   gauntlet bind <name> [sid]    bind a session to a front by hand
+#   gauntlet unbind <name>        free a seat (front stays, claim is released)
+#   gauntlet bases                fetch all repos, print current dev tips
+#   gauntlet doctor               hunt protocol violations mechanically
+
+set -uo pipefail
+
+# Workspace root: this script lives at <root>/.jarvis/bin/gauntlet.
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+RUN="$ROOT/.jarvis/run"
+DIR="$ROOT/.jarvis/gauntlet"
+FLAG="$RUN/GAUNTLET_ACTIVE"
+STONES="$RUN/stones"
+CLAIMS="$RUN/claims"
+SESSIONS="$RUN/sessions"
+
+# repo : dev-line-branch — from .jarvis/gauntlet.repos if present, else auto-detected.
+# One line per repo: "<dir-name>:<dev-line-branch>". Lines starting with # ignored.
+REPOS=()
+REPO_CFG="$ROOT/.jarvis/gauntlet.repos"
+if [ -f "$REPO_CFG" ]; then
+  while IFS= read -r line; do
+    case "$line" in ''|\#*) continue ;; esac
+    REPOS+=("$line")
+  done < "$REPO_CFG"
+else
+  for d in "$ROOT"/*/; do
+    [ -d "$d/.git" ] || continue
+    n=$(basename "$d") dl=""
+    for cand in development dev main master; do
+      git -C "$d" rev-parse --verify --quiet "origin/$cand" >/dev/null 2>&1 && { dl="$cand"; break; }
+    done
+    [ -n "$dl" ] && REPOS+=("$n:$dl")
+  done
+fi
+
+# The evidence ladder (skills/verify-live) IS the phase vocabulary.
+PHASES="RECON DESIGN BUILD GATED LIVE-QUEUED LIVE-VERIFIED PUSHED LANDED"
+STONE_NAMES="reality time mind"
+STALE_MINS=30
+
+c_red=$'\033[31m'; c_grn=$'\033[32m'; c_yel=$'\033[33m'; c_dim=$'\033[2m'; c_off=$'\033[0m'
+say() { printf '%s\n' "$*"; }
+is_on() { [ -f "$FLAG" ]; }
+now()   { date +%s; }
+mtime() { stat -f %m "$1" 2>/dev/null || echo 0; }
+
+stone_icon() {
+  case "$1" in
+    reality) printf '🔴' ;; time) printf '🟢' ;; mind) printf '🟡' ;;
+    power)   printf '🟣' ;; space) printf '🔵' ;; soul) printf '🟠' ;;
+    *)       printf '⚪' ;;
+  esac
+}
+stone_grants() {
+  case "$1" in
+    reality) printf 'start services · claim a LIVE result' ;;
+    time)    printf 'the migration head, one per repo' ;;
+    mind)    printf 'write the records — the Collector, once' ;;
+  esac
+}
+
+# ── the three questions ──────────────────────────────────────────────────────
+front_phase() {                       # WHERE? — one word, validated
+  local raw; raw=$(grep -m1 '^status:' "$1" 2>/dev/null | sed 's/^status:[[:space:]]*//' \
+                   | tr -d '*`' | awk '{print toupper($1)}')
+  [ -z "$raw" ] && { printf 'UNSET'; return; }
+  case " $PHASES " in *" $raw "*) printf '%s' "$raw" ;; *) printf '%s?' "$raw" ;; esac
+}
+front_alive() {                       # ALIVE? — minutes since it last wrote
+  local m=$(( ( $(now) - $(mtime "$1") ) / 60 ))
+  if   [ "$m" -ge 120 ]; then printf '%dh ago  %s⚠ SILENT%s' $((m/60)) "$c_red" "$c_off"
+  elif [ "$m" -ge "$STALE_MINS" ]; then printf '%dm ago  %s⚠ STALE%s' "$m" "$c_yel" "$c_off"
+  else printf '%dm ago' "$m"; fi
+}
+front_needs() {                       # NEEDS YOU? — the only column that costs him time
+  local n; n=$(grep -m1 '^needs:' "$1" 2>/dev/null | sed 's/^needs:[[:space:]]*//' | tr -d '*`')
+  printf '%s' "${n:-—}"
+}
+front_branch() {
+  grep -m1 '^branch:' "$1" 2>/dev/null | sed 's/^branch:[[:space:]]*//' \
+    | tr -d '*`' | awk '{print $1}'
+}
+
+# A fixed vocabulary is checkable. Prose is not — this is why phases are one word.
+check_drift() {
+  local f="$1" phase="$2" br; br=$(front_branch "$f")
+  [ -z "$br" ] && return
+  for entry in ${REPOS[@]+"${REPOS[@]}"}; do
+    local r="${entry%%:*}" dl="${entry##*:}" d="$ROOT/${entry%%:*}"
+    [ -d "$d/.git" ] || continue
+    git -C "$d" rev-parse --verify --quiet "$br" >/dev/null 2>&1 || continue
+    if git -C "$d" merge-base --is-ancestor "$br" "origin/$dl" 2>/dev/null; then
+      [ "$phase" != "LANDED" ] && \
+        say "  ${c_yel}⚠ board is lying${c_off} — $(basename "$f" .md)/$r says $phase but $br is merged into origin/$dl"
+    fi
+  done
+}
+
+manned() {                            # MANNED? — is a live session sitting in this seat
+  if [ -s "$CLAIMS/$1" ]; then printf '%s✓ manned%s' "$c_grn" "$c_off"; else printf '%s· free%s' "$c_dim" "$c_off"; fi
+}
+
+cmd_status() {
+  say "════════════════════════════════════════════════════════════════════"
+  if is_on; then say "🧤 ${c_grn}GAUNTLET: OPEN${c_off}   $(head -n1 "$FLAG")"
+  else            say "🧤 ${c_dim}GAUNTLET: closed${c_off}   (ordinary charter applies)"; fi
+  say "════════════════════════════════════════════════════════════════════"
+  say ""
+  printf '  %-16s %-16s %-22s %-18s %s\n' "FRONT" "WHERE?" "ALIVE?" "SEAT" "NEEDS YOU?"
+  if [ -d "$DIR" ]; then
+    for f in "$DIR"/*.md; do
+      [ -e "$f" ] || continue
+      local b; b=$(basename "$f" .md); [ "$b" = "BOARD" ] && continue
+      local p; p=$(front_phase "$f")
+      printf '  %-16s %-16s %-22s %-18s %s\n' "$b" "$p" "$(front_alive "$f")" "$(manned "$b")" "$(front_needs "$f")"
+    done
+  else
+    say "  ${c_dim}(no board)${c_off}"
+  fi
+  say ""
+  cmd_stones
+  if [ -d "$DIR" ]; then
+    local tmp; tmp=$(mktemp)
+    for f in "$DIR"/*.md; do
+      [ -e "$f" ] || continue
+      [ "$(basename "$f" .md)" = "BOARD" ] && continue
+      check_drift "$f" "$(front_phase "$f")" >> "$tmp"
+    done
+    [ -s "$tmp" ] && { say ""; say "DRIFT — a fixed vocabulary is checkable; this is why phases are one word"; cat "$tmp"; }
+    rm -f "$tmp"
+  fi
+}
+
+cmd_stones() {
+  say "STONES"
+  printf '  %s %-9s %-38s %s\n' "$(stone_icon power)" "POWER" "push — never delegated" "MR. STARK (permanent)"
+  for s in $STONE_NAMES; do
+    local file="$STONES/$s" bearer="${c_dim}free${c_off}" lease=""
+    if [ -s "$file" ]; then
+      local raw who took mins why
+      raw=$(head -n1 "$file"); IFS='|' read -r who took mins why <<< "$raw"
+      local held=$(( ( $(now) - ${took:-0} ) / 60 ))
+      bearer="$who"
+      if [ "${mins:-0}" -gt 0 ]; then
+        if [ "$held" -gt "$mins" ]; then lease="${c_red}${held}m / ${mins}m LEASE EXPIRED${c_off}"
+        else lease="${c_dim}${held}m / ${mins}m${c_off}"; fi
+      else lease="${c_dim}${held}m, no lease${c_off}"; fi
+      [ -n "${why:-}" ] && lease="$lease ${c_dim}· $why${c_off}"
+    fi
+    printf '  %s %-9s %-38s %s %s\n' "$(stone_icon "$s")" "$(echo "$s" | tr '[:lower:]' '[:upper:]')" "$(stone_grants "$s")" "$bearer" "$lease"
+  done
+  printf '  %s %-9s %-38s %s\n' "$(stone_icon space)" "SPACE" "own a port profile" "${c_dim}reserved${c_off}"
+  printf '  %s %-9s %-38s %s\n' "$(stone_icon soul)"  "SOUL"  "the production green-signal" "${c_dim}reserved${c_off}"
+}
+
+cmd_open() {
+  local reason="${1:-}"
+  [ -z "$reason" ] && { say "usage: gauntlet open \"<reason / front list>\""; exit 1; }
+  mkdir -p "$RUN" "$DIR" "$STONES" "$CLAIMS" "$SESSIONS"
+  printf '%s — opened %s\n' "$reason" "$(date '+%Y-%m-%d %H:%M')" > "$FLAG"
+  for s in $STONE_NAMES; do : > "$STONES/$s"; done
+  rm -f "$CLAIMS"/* "$SESSIONS"/* 2>/dev/null   # a new gauntlet starts with every seat free
+  say "🧤 ${c_grn}GAUNTLET OPEN${c_off} — broadcast to every session via the hook."
+  say "   Seats are free: the next session to start auto-takes the lowest-order front."
+  say "   Declare a Collect time on the board. Close with: gauntlet close"
+}
+
+cmd_close() {
+  is_on || { say "gauntlet is already closed"; exit 0; }
+  local stamp; stamp=$(date '+%Y-%m-%d-%H%M')
+  if [ -d "$DIR" ]; then
+    mkdir -p "$ROOT/.jarvis/gauntlet-archive"
+    cp -R "$DIR" "$ROOT/.jarvis/gauntlet-archive/$stamp" 2>/dev/null || true
+    say "board archived → .jarvis/gauntlet-archive/$stamp"
+  fi
+  rm -f "$FLAG"; for s in $STONE_NAMES; do : > "$STONES/$s" 2>/dev/null; done
+  rm -f "$CLAIMS"/* "$SESSIONS"/* 2>/dev/null   # seats released; no session is a front any more
+  say "🧤 ${c_grn}GAUNTLET CLOSED${c_off} — stones cleared, seats released, ordinary charter resumes."
+  say "   Remaining: the Collector holds 🟡 MIND and writes TRACKER + ledger + memory ONCE."
+}
+
+cmd_take() {
+  local s="${1:-}" front="${2:-}" mins="${3:-0}" why="${4:-}"
+  case " $STONE_NAMES " in *" $s "*) ;; *)
+    say "usage: gauntlet take <reality|time|mind> <front> [mins] [\"why\"]"; exit 1 ;; esac
+  [ -z "$front" ] && { say "which front?"; exit 1; }
+  mkdir -p "$STONES"
+  local cur; cur=$(head -n1 "$STONES/$s" 2>/dev/null || true)
+  if [ -n "$cur" ]; then
+    local who; who=$(echo "$cur" | cut -d'|' -f1)
+    if [ "$who" != "$front" ]; then
+      say "${c_red}✋ DENIED${c_off} — $(stone_icon "$s") $(echo "$s" | tr '[:lower:]' '[:upper:]') is borne by: $who"
+      say "   Build and run static gates instead; queue your pass."
+      exit 1
+    fi
+  fi
+  printf '%s|%s|%s|%s\n' "$front" "$(now)" "$mins" "$why" > "$STONES/$s"
+  say "${c_grn}$(stone_icon "$s") $(echo "$s" | tr '[:lower:]' '[:upper:]') → $front${c_off}${mins:+  (lease ${mins}m)}"
+  [ "$s" = "reality" ] && say "   Start services FROM YOUR OWN WORKTREE. Your fleet works under this cover."
+}
+
+cmd_release() {
+  local s="${1:-reality}"
+  local cur; cur=$(head -n1 "$STONES/$s" 2>/dev/null || true)
+  : > "$STONES/$s" 2>/dev/null
+  say "$(stone_icon "$s") $(echo "$s" | tr '[:lower:]' '[:upper:]') released${cur:+ (was: $(echo "$cur" | cut -d'|' -f1))} — now free."
+}
+
+cmd_summon() {
+  local n="${1:-}" ch="${2:-}" app="${3:-none}" terr="${4:-}" ord="${5:-50}"
+  [ -z "$n" ] && { say "usage: gauntlet summon <name> [\"character\"] [none|burst|heavy] [\"territory\"] [order]"; exit 1; }
+  case "$(echo "$n" | tr '[:upper:]' '[:lower:]')" in
+    stark|"mr stark"|"mr. stark") say "${c_red}✋ never name a front after the principal.${c_off}"; exit 1 ;;
+  esac
+  mkdir -p "$DIR"
+  local f="$DIR/$n.md"
+  [ -f "$f" ] && { say "front '$n' already summoned — $f"; exit 1; }
+  local U; U=$(echo "$n" | tr '[:lower:]' '[:upper:]')
+  cat > "$f" <<EOF
+status: RECON
+branch: (not cut yet)
+needs: his task assignment
+character: ${ch:-(declare it)}
+reality: ${app}
+territory: ${terr:-(claim before first edit)}
+order: ${ord}
+session: unclaimed
+
+# 🦸 FRONT ${U} — cold-boot brief
+
+**If you are reading this, you are ${U}.** A session start auto-seated you here.
+**Read this whole file before editing anything.** If that is wrong — if you were meant
+to be a different front — say so to Mr. Stark and run \`gauntlet unbind ${n}\`.
+
+## Who you are
+
+${ch:-(character undeclared — ask Mr. Stark)}
+
+🔴 appetite: **${app}** · territory: **${terr:-(claim before first edit)}**
+
+## Task
+
+_(assigned by Mr. Stark — **never pick your own target**. If this section is empty or
+marked PROPOSED, ASK HIM before you build anything.)_
+
+## Standing orders — all of them
+
+1. **Read first:** this file, then \`.jarvis/gauntlet/BOARD.md\`, then \`gauntlet status\`.
+2. **Own worktree, always.** Main trees stay on baseline; nobody edits them.
+   \`git -C <repo> worktree add $ROOT/.jarvis/wt/${n}-<repo> -b <branch> origin/<devline>\`
+   Symlink \`.env\`/\`node_modules\` — never copy. Never \`git stash pop\` bare (refs are shared).
+3. **One branch NAME across every repo you touch** (law 3a). Feature branches only.
+   **He pushes — asked freshly, every single time** (law 3/11). Never dev/main.
+4. **Write only to this file.** TRACKER, git ledger and memory are 🟡 MIND — the
+   Collector's, once, at the Collect. Not yours, however tempting.
+5. **You are a commander, not a soloist** (law 13 · gauntlet L13). DUM-E / U / JOCASTA
+   scout; FRIDAY builds in your worktree; EDITH refutes. Live agents (EDITH / PEPPER /
+   HAPPY) work under your 🔴 cover. **Never be the only verifier of your own work.**
+   Name the actor in every log line. **Foreground only** (law 16) — no background runs.
+6. **EDITH deploys only on his command** (law 15): make it ready for HIS manual pass
+   first. **"wait" / "stop" = hard stop** — report status immediately (law 14).
+7. **Stones before claims.** No 🔴 → static gates only, then queue the live pass. That
+   is not blocked; it is correctly scoped. \`gauntlet take reality ${n} <mins> "why"\`
+8. **Gate integrity** (gauntlet L1): capture each tool's OWN exit code — never pipe a
+   gate through grep. Prove baseline parity before claiming a clean delta.
+9. **Ask before adding an env var** (law 3b). Default to a constant in code.
+10. **Keep the header current — it IS the board.**
+    status: one word · RECON→DESIGN→BUILD→GATED→LIVE-QUEUED→LIVE-VERIFIED→PUSHED→LANDED
+    needs:  what he is blocking, or —
+
+## Checkpoint every ~90 minutes
+
+\`\`\`
+CHECKPOINT HH:MM
+  DONE      …
+  NEXT      …
+  BLOCKED   …
+  NEEDS-HIM …  (also add it to the board's NEEDS-PRINCIPAL queue)
+\`\`\`
+
+## Log — append only, newest last · name the actor
+
+- $(date '+%d %b %H:%M') front summoned, seat free.
+EOF
+  say "${c_grn}🦸 ${n} summoned${c_off} → $f"
+  say "   character: ${ch:-(undeclared)} · 🔴 appetite: ${app} · seat order: ${ord}"
+  say "   The next session to start with no seat will be auto-summoned into it."
+}
+
+# enlist — the on-his-ask path. ONE command turns ANY session, new or already
+# running, into a front: it raises the front if it does not exist yet and seats
+# the caller in it. This is what "summon a front on my ask" costs: one line.
+cmd_enlist() {
+  local n="${1:-}" ch="${2:-}" app="${3:-none}" terr="${4:-}" sid="${5:-}"
+  [ -z "$n" ] && { say "usage: gauntlet enlist <name> [\"character\"] [none|burst|heavy] [\"territory\"] [session-id]"; exit 1; }
+  is_on || { say "${c_yel}no gauntlet is open${c_off} — ask Mr. Stark, or: gauntlet open \"<reason>\""; exit 1; }
+  [ -z "$sid" ] && sid="${CLAUDE_SESSION_ID:-}"
+  [ -z "$sid" ] && sid="session-$$-$(now)"
+  mkdir -p "$DIR" "$CLAIMS" "$SESSIONS"
+
+  local f="$DIR/$n.md"
+  if [ ! -f "$f" ]; then cmd_summon "$n" "$ch" "$app" "$terr" "${6:-50}"; fi
+
+  # Seat is exclusive: an occupied front is never silently taken over.
+  if [ -s "$CLAIMS/$n" ]; then
+    local held; held=$(head -n1 "$CLAIMS/$n")
+    if [ "$held" != "$sid" ]; then
+      say "${c_red}✋ DENIED${c_off} — front '$n' is already manned by session: $held"
+      say "   Free it deliberately with: gauntlet unbind $n"
+      exit 1
+    fi
+  fi
+  printf '%s\n' "$sid" > "$CLAIMS/$n"
+  printf '%s\n' "$n"   > "$SESSIONS/$sid"
+  sed -i '' "s|^session:.*|session: CLAIMED $(date '+%d %b %H:%M') (enlist)|" "$f" 2>/dev/null || true
+
+  say "${c_grn}🦸 YOU ARE NOW FRONT: $(echo "$n" | tr '[:lower:]' '[:upper:]')${c_off}"
+  say "   ▸ Read $f in full before touching anything."
+  say "   ▸ Your task is HIS to assign. If the Task section is empty, ASK HIM."
+  say "   ▸ Own worktree only · one branch name across repos · he pushes, freshly asked."
+}
+
+cmd_seats() {
+  say "SEATS — a session that starts takes the lowest-order free one, atomically."
+  say ""
+  printf '  %-6s %-16s %-10s %s\n' "ORDER" "FRONT" "SEAT" "HELD BY (session)"
+  [ -d "$DIR" ] || { say "  (no board)"; return; }
+  for f in "$DIR"/*.md; do
+    [ -e "$f" ] || continue
+    local b; b=$(basename "$f" .md); [ "$b" = "BOARD" ] && continue
+    local o; o=$(grep -m1 '^order:' "$f" 2>/dev/null | sed 's/^order:[[:space:]]*//' | tr -d '*`')
+    case "$o" in ''|*[!0-9]*) o=50 ;; esac
+    local who="${c_dim}free${c_off}" seat="${c_dim}· free${c_off}"
+    [ -s "$CLAIMS/$b" ] && { who=$(head -n1 "$CLAIMS/$b"); seat="${c_grn}✓ manned${c_off}"; }
+    printf '  %-6s %-16s %-10s %s\n' "$o" "$b" "$seat" "$who"
+  done | sort -n -k1,1
+}
+
+cmd_assign() {
+  local n="${1:-}" task="${2:-}"
+  { [ -z "$n" ] || [ -z "$task" ]; } && { say "usage: gauntlet assign <front> \"<task>\""; exit 1; }
+  local f="$DIR/$n.md"
+  [ -f "$f" ] || { say "no such front: $n"; exit 1; }
+  local tmp; tmp=$(mktemp)
+  awk -v task="$task" -v stamp="$(date '+%d %b %H:%M')" '
+    /^## Task$/ { print; print ""; print task; print ""; print "_(assigned by Mr. Stark, " stamp ")_"; skip=1; next }
+    skip && /^## / { skip=0 }
+    !skip { print }
+  ' "$f" > "$tmp" && mv "$tmp" "$f"
+  sed -i '' "s|^needs:.*|needs: —|" "$f" 2>/dev/null || true
+  say "${c_grn}✓ task assigned to $n${c_off}"
+}
+
+cmd_bind() {
+  local n="${1:-}" sid="${2:-manual}"
+  [ -z "$n" ] && { say "usage: gauntlet bind <front|heimdall> [session-id]"; exit 1; }
+  mkdir -p "$CLAIMS" "$SESSIONS"
+  [ "$n" != "heimdall" ] && [ ! -f "$DIR/$n.md" ] && { say "no such front: $n"; exit 1; }
+  [ "$n" != "heimdall" ] && printf '%s\n' "$sid" > "$CLAIMS/$n"
+  printf '%s\n' "$n" > "$SESSIONS/$sid"
+  say "${c_grn}bound${c_off} session '$sid' → $n"
+}
+
+cmd_unbind() {
+  local n="${1:-}"
+  [ -z "$n" ] && { say "usage: gauntlet unbind <front>"; exit 1; }
+  local sid=""; [ -s "$CLAIMS/$n" ] && sid=$(head -n1 "$CLAIMS/$n")
+  rm -f "$CLAIMS/$n"; [ -n "$sid" ] && rm -f "$SESSIONS/$sid"
+  sed -i '' "s|^session:.*|session: unclaimed|" "$DIR/$n.md" 2>/dev/null || true
+  say "seat '$n' released${sid:+ (was: $sid)} — next new session will take it."
+}
+
+cmd_front() {
+  local n="${1:-}"
+  [ -z "$n" ] && { say "usage: gauntlet front <name>"; exit 1; }
+  local f="$DIR/$n.md"
+  [ -f "$f" ] || { say "no such front: $n"; ls -1 "$DIR" 2>/dev/null; exit 1; }
+  cat "$f"
+}
+
+cmd_bases() {
+  for entry in ${REPOS[@]+"${REPOS[@]}"}; do
+    local r="${entry%%:*}" dl="${entry##*:}" d="$ROOT/${entry%%:*}"
+    [ -d "$d/.git" ] || continue
+    git -C "$d" fetch --quiet origin 2>/dev/null
+    printf '%-30s origin/%-14s %s\n' "$r" "$dl" "$(git -C "$d" log --oneline -1 "origin/$dl" 2>/dev/null)"
+  done
+}
+
+cmd_doctor() {
+  local issues=0
+  say "gauntlet doctor — mechanical protocol check"
+  say ""
+  for entry in ${REPOS[@]+"${REPOS[@]}"}; do
+    local r="${entry%%:*}" dl="${entry##*:}" d="$ROOT/${entry%%:*}"
+    [ -d "$d/.git" ] || continue
+    local br dirty
+    br=$(git -C "$d" rev-parse --abbrev-ref HEAD 2>/dev/null)
+    dirty=$(git -C "$d" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+    if is_on && [ "$br" != "$dl" ]; then
+      say "${c_yel}⚠ $r${c_off}: main tree is on '$br', not baseline '$dl' — a front may be editing the shared tree."
+      issues=$((issues+1))
+    fi
+    if [ "$dirty" != "0" ] && [ "$br" = "$dl" ]; then
+      say "${c_red}✖ $r${c_off}: BASELINE tree has $dirty uncommitted files — someone is working in the main tree."
+      issues=$((issues+1))
+    fi
+    git -C "$d" fetch --quiet origin 2>/dev/null
+    local behind; behind=$(git -C "$d" rev-list --count "HEAD..origin/$dl" 2>/dev/null || echo 0)
+    if [ "${behind:-0}" -gt 0 ]; then
+      say "${c_yel}⚠ $r${c_off}: HEAD is $behind behind origin/$dl — bases may be stale."
+      issues=$((issues+1))
+    fi
+  done
+  # expired leases
+  for s in $STONE_NAMES; do
+    [ -s "$STONES/$s" ] || continue
+    IFS='|' read -r who took mins why <<< "$(head -n1 "$STONES/$s")"
+    [ "${mins:-0}" -gt 0 ] || continue
+    local held=$(( ( $(now) - took ) / 60 ))
+    [ "$held" -gt "$mins" ] && { say "${c_yel}⚠ $(stone_icon "$s") $(echo "$s" | tr '[:lower:]' '[:upper:]')${c_off}: lease expired — $who has held it ${held}m of ${mins}m."; issues=$((issues+1)); }
+  done
+  say ""
+  [ "$issues" -eq 0 ] && say "${c_grn}✓ clean — no protocol violations detected${c_off}" \
+                      || say "${c_red}$issues issue(s) found${c_off}"
+}
+
+case "${1:-status}" in
+  status)  cmd_status ;;
+  open)    shift; cmd_open "$@" ;;
+  close)   cmd_close ;;
+  stones)  cmd_stones ;;
+  take)    shift; cmd_take "$@" ;;
+  release) shift; cmd_release "$@" ;;
+  summon)  shift; cmd_summon "$@" ;;
+  front)   shift; cmd_front "$@" ;;
+  enlist)  shift; cmd_enlist "$@" ;;
+  seats)   cmd_seats ;;
+  assign)  shift; cmd_assign "$@" ;;
+  bind)    shift; cmd_bind "$@" ;;
+  unbind)  shift; cmd_unbind "$@" ;;
+  bases)   cmd_bases ;;
+  doctor)  cmd_doctor ;;
+  *)       sed -n '2,19p' "$0" | sed 's/^# \?//' ;;
+esac
