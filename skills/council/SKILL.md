@@ -24,6 +24,18 @@ The escalation ladder for questions: **DUM-E** (what/where) → **JOCASTA** (why
 **EDITH** (is it true live). Don't send a researcher to fetch a line number or a
 scout to explain a failure.
 
+## Playbooks (typed commands)
+
+| Ask | Skill | Hat | Lands in |
+|-----|-------|-----|----------|
+| `qa` / `qa-only` | `skills/qa/` | EDITH | `reports/<date>-edith-qa-<slug>.md` |
+| `investigate` | `skills/investigate/` | JOCASTA | `reports/<date>-jocasta-investigate-<slug>.md` |
+| `review` | `skills/review/` | assistant / EDITH | `reports/<date>-review-<slug>.md` |
+| `ideate` | `skills/ideate/` | PEPPER | chronicle plan, not a report binge |
+
+Law 15: do not launch EDITH/QA because a build finished. Investigate never
+fixes. Review never ships.
+
 ## The mission brief (what every launch must contain)
 
 1. **The mission**, one sentence, with the verdict-shape you want back
