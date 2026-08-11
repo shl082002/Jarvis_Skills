@@ -19,7 +19,7 @@ instruction conflicts with them, surface the conflict instead of silently pickin
 in `.jarvis/kit/commands/` (or this kit's `commands/`), execute that file.
 Core set: boot, day-close, remember, build, ideate, verify, tracker, ledger,
 handover, chronicle, atlas, council, gauntlet, sweep, teach, qa,
-qa-only, investigate, review, **browse**.
+qa-only, investigate, review, browse, **heimdall**.
 
 ---
 
