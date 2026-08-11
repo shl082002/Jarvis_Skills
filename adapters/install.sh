@@ -64,7 +64,8 @@ stub "$TARGET/.jarvis/POLICY.md" "# PERMISSION POLICY — live. Edit freely; eve
 - PUSH is gated (law 17): no push without a fresh one-shot grant —
   \`.jarvis/bin/gauntlet push-ok \"<what and why>\"\`. One grant, one push, 10 minutes.
 - Mainline pushes, force-pushes and sudo are refused even with a grant open.
-- Remote shells (ssh/scp/sftp/rsync) have no grant path — the principal runs those."
+- Remote shells (ssh/scp/sftp/rsync) have no grant path — the principal runs those.
+# judgment_library: .jarvis/kit/assets/learning"
 
 stub "$TARGET/.jarvis/HANDOVER.md" "# HANDOVER — last updated: NEVER (fresh install)
 ## 1. Mission

@@ -62,7 +62,9 @@ Jarvis_Skills/
 │   ├── playground/      reports protocol — keep the chat clean
 │   ├── council/         the dispatch playbook for the agent team
 │   ├── services/        the service registry — svc up/down/status, one file
-│   └── gauntlet/        several sessions in parallel: fronts, stones, the Collect
+│   ├── gauntlet/        several sessions in parallel: fronts, stones, the Collect
+│   └── judgment-library/ on-demand mental-model cards (teach one topic)
+├── assets/learning/     ← judgment cards (md only; invoked via teach)
 ├── commands/            ← thin slash-command wrappers over the skills
 └── adapters/            ← how to wire the kit into each harness
     ├── claude-code.md

@@ -15,6 +15,11 @@ instruction conflicts with them, surface the conflict instead of silently pickin
 | **BRANCH_PREFIX** | `jarvis/` | All working branches are `<prefix><slice-name>` |
 | **WORKROOM** | `.jarvis/` | The one directory you own for records (memory, ledger, chronicle, reports, handover) |
 
+**Command words:** when the principal's message is a bare command matching a file
+in `.jarvis/kit/commands/` (or this kit's `commands/`), execute that file.
+Core set: boot, day-close, remember, build, ideate, verify, tracker, ledger,
+handover, chronicle, atlas, council, gauntlet, sweep, **teach**.
+
 ---
 
 ## The Laws
