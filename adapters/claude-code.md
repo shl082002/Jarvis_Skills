@@ -14,6 +14,7 @@ From the target project root (or run `install.sh claude` to do all of this):
 | `hooks/*.sh` | `.claude/hooks/` | gauntlet auto-summon (needs wiring — see below) |
 | `bin/*` | `.jarvis/bin/` | `svc` (services) and `gauntlet` (parallel sessions) |
 | `JARVIS.md` | project root (or `.claude/`) | referenced from CLAUDE.md |
+| (all of the above) | `.jarvis/kit/` | **portable stage** — same files Cursor/generic read |
 
 Then add to the project's `CLAUDE.md` (create it if absent):
 

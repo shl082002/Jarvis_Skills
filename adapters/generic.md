@@ -16,9 +16,10 @@ whole system — an API loop, a new IDE, a CLI that doesn't exist yet.
    writes, session open/close, builds, verification claims, or delegation."*
    Agents that support tool/document retrieval can index the folder instead.
 
-3. **Scaffold the workroom.** Create `.jarvis/` with `MEMORY.md`, `LEDGER.md`,
-   `HANDOVER.md` stubs and `memory/`, `chronicle/`, `reports/` dirs
-   (`install.sh generic` does this).
+3. **Scaffold the workroom.** `install.sh generic` creates `.jarvis/` stubs and
+   stages the full portable kit at `.jarvis/kit/` (agents, commands, skills,
+   assets). That directory is the same tree Claude and Cursor get — they only
+   add harness projections on top.
 
 4. **Roles as hats.** Without subagent support, specialists run inline: read
    `agents/<name>.md`, adopt its standing orders for the mission, write the
@@ -26,7 +27,10 @@ whole system — an API loop, a new IDE, a CLI that doesn't exist yet.
    the files as agent definitions.
 
 5. **Commands as phrases.** "boot", "day-close", "remember: X" → execute the
-   matching `commands/<name>.md`.
+   matching `.jarvis/kit/commands/<name>.md` (or the kit checkout's `commands/`).
+
+6. **Adding skills.** See `adapters/adding-surface.md` — globs, not per-skill
+   install lines. Keep command/skill bodies free of `~/.claude/…` paths.
 
 ## The portability contract
 

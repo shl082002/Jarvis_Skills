@@ -2,6 +2,12 @@
 # Jarvis Skills installer — wires the kit into a target project.
 # Usage: install.sh <claude|cursor|generic> [target-project-dir]
 # Run from anywhere; target defaults to the current directory.
+#
+# PORTABILITY: every harness gets the same workroom + .jarvis/kit/ (agents,
+# commands, skills, assets). Claude/Cursor extras are *projections* of that
+# kit, not a second copy of the truth. New skills/commands are picked up by
+# the globs below — do not add per-skill install lines. New *kinds* of
+# artifact (sidecars, extra bins): see adapters/adding-surface.md.
 set -euo pipefail
 
 HARNESS="${1:-}"
@@ -17,7 +23,8 @@ echo "Installing Jarvis Skills ($HARNESS) into: $TARGET"
 
 # ---- The workroom (all harnesses) -------------------------------------------
 mkdir -p "$TARGET/.jarvis/memory" "$TARGET/.jarvis/chronicle" "$TARGET/.jarvis/reports" \
-         "$TARGET/.jarvis/bin" "$TARGET/.jarvis/logs" "$TARGET/.jarvis/run"
+         "$TARGET/.jarvis/bin" "$TARGET/.jarvis/logs" "$TARGET/.jarvis/run" \
+         "$TARGET/.jarvis/live" "$TARGET/.jarvis/inbox"
 
 stub() { [[ -f "$1" ]] || printf '%s\n' "$2" > "$1"; }
 
@@ -70,6 +77,20 @@ Run the boot ritual; brief the principal; ask what we're building.
 ## 6. Where everything is
 MEMORY.md · LEDGER.md · chronicle/ · reports/ — all under .jarvis/"
 
+# ---- Portable kit stage (all harnesses) -------------------------------------
+# File-first copy so Claude, Cursor, and a raw agent share one tree.
+stage_portable_kit() {
+  mkdir -p "$TARGET/.jarvis/kit"
+  rm -rf "$TARGET/.jarvis/kit/agents" "$TARGET/.jarvis/kit/commands" "$TARGET/.jarvis/kit/skills"
+  cp -R "$KIT/agents" "$KIT/commands" "$KIT/skills" "$TARGET/.jarvis/kit/"
+  if [[ -d "$KIT/assets" ]]; then
+    rm -rf "$TARGET/.jarvis/kit/assets"
+    mkdir -p "$TARGET/.jarvis/kit/assets"
+    cp -R "$KIT/assets/." "$TARGET/.jarvis/kit/assets/"
+  fi
+  echo "  + .jarvis/kit/{agents,commands,skills} staged (portable)"
+}
+
 # ---- The charter (all harnesses) --------------------------------------------
 if [[ ! -f "$TARGET/JARVIS.md" ]]; then
   cp "$KIT/JARVIS.md" "$TARGET/JARVIS.md"
@@ -77,6 +98,16 @@ if [[ ! -f "$TARGET/JARVIS.md" ]]; then
 else
   echo "  = JARVIS.md already present — left untouched (amend, never fork)"
 fi
+
+# Cursor always-on rule must follow the *installed* charter so House Config
+# (principal name, project lines) is not clobbered by the portable default.
+cursor_charter_src() {
+  if [[ -f "$TARGET/JARVIS.md" ]]; then
+    echo "$TARGET/JARVIS.md"
+  else
+    echo "$KIT/JARVIS.md"
+  fi
+}
 
 # ---- Wiring the hooks into .claude/settings.json ------------------------------
 # MERGE, NEVER OVERWRITE. A target's settings.json may hold permissions, other
@@ -167,6 +198,8 @@ PY
 }
 
 # ---- Harness-specific wiring -------------------------------------------------
+stage_portable_kit
+
 case "$HARNESS" in
   claude)
     mkdir -p "$TARGET/.claude/agents" "$TARGET/.claude/commands" "$TARGET/.claude/skills"
@@ -180,7 +213,7 @@ case "$HARNESS" in
     mkdir -p "$TARGET/.claude/hooks"
     cp "$KIT/hooks/"*.sh "$TARGET/.claude/hooks/"
     chmod +x "$TARGET/.claude/hooks/"*.sh
-    echo "  + .claude/{agents,commands,skills,hooks} populated"
+    echo "  + .claude/{agents,commands,skills,hooks} populated (Claude projection)"
     if out="$(wire_claude_hooks "$TARGET/.claude/settings.json")"; then
       printf '%s\n' "$out" | sed 's/^/  + settings.json: /'
       echo "    (merged in place — every pre-existing key was preserved)"
@@ -196,9 +229,11 @@ case "$HARNESS" in
     ;;
   cursor)
     mkdir -p "$TARGET/.cursor/rules"
+    _charter="$(cursor_charter_src)"
     { printf -- '---\ndescription: The Jarvis operating charter — binds every session\nalwaysApply: true\n---\n\n'
-      cat "$KIT/JARVIS.md"
+      cat "$_charter"
     } > "$TARGET/.cursor/rules/00-jarvis-charter.mdc"
+    echo "  + .cursor/rules/00-jarvis-charter.mdc from $_charter"
     for d in "$KIT/skills/"*/; do
       name="$(basename "$d")"
       desc="$(sed -n 's/^description: //p' "$d/SKILL.md" | head -1)"
@@ -206,17 +241,11 @@ case "$HARNESS" in
         awk 'NR==1 && /^---$/ {fm=1; next} fm==1 {if (/^---$/) fm=2; next} {print}' "$d/SKILL.md"
       } > "$TARGET/.cursor/rules/$name.mdc"
     done
-    # agents + commands ride along as reference files for inline "hat" use
-    mkdir -p "$TARGET/.jarvis/kit"
-    cp -R "$KIT/agents" "$KIT/commands" "$TARGET/.jarvis/kit/"
     echo "  + .cursor/rules populated (charter always-on, skills on-demand)"
-    echo "  + agents/commands staged at .jarvis/kit/ for inline use"
+    echo "  + .jarvis/kit already staged for hats/commands (same as Claude/generic)"
     ;;
   generic)
-    mkdir -p "$TARGET/.jarvis/kit"
-    cp -R "$KIT/agents" "$KIT/commands" "$KIT/skills" "$TARGET/.jarvis/kit/"
-    echo "  + full kit staged at .jarvis/kit/"
-    echo "  ! Load JARVIS.md as the agent's standing instructions (see adapters/generic.md)"
+    echo "  + generic: .jarvis/kit is the only projection — load JARVIS.md (see adapters/generic.md)"
     ;;
 esac
 

@@ -68,7 +68,8 @@ Jarvis_Skills/
     ├── claude-code.md
     ├── cursor.md
     ├── generic.md
-    └── install.sh       one-shot installer (claude | cursor | generic)
+    ├── adding-surface.md  ← checklist: new skill/command stays multi-host
+    └── install.sh         one-shot installer (claude | cursor | generic)
 ```
 
 ## The workroom
@@ -84,9 +85,15 @@ project root — as its writable workroom:
 ├── LEDGER.md            the git branch ledger
 ├── TRACKER.md           the one list — open/blocked/parked commitments
 ├── HANDOVER.md          the live baton — current state + next first task
+├── kit/                 portable stage — agents, commands, skills, assets
+├── live/                optional heartbeats (Heimdall)
+├── inbox/               optional voice/sidecar utterances
 ├── chronicle/           YYYY-MM-DD/ dated plans, decisions, session closes
 └── reports/             full agent reports (the chat stays clean)
 ```
+
+`install.sh <claude|cursor|generic>` always fills `.jarvis/kit/`. Claude and Cursor
+add harness projections on top; they are not a second constitution.
 
 Everything else in the target project is **read-only until the principal says build**.
 
