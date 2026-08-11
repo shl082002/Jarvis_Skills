@@ -29,7 +29,7 @@ mkdir -p "$TARGET/.jarvis/memory" "$TARGET/.jarvis/chronicle" "$TARGET/.jarvis/r
 stub() { [[ -f "$1" ]] || printf '%s\n' "$2" > "$1"; }
 
 # Butler scripts are kit-owned code — refreshed on every install.
-for b in svc gauntlet heimdall voice-inbox voice-say browse-env; do
+for b in svc gauntlet heimdall cockpit voice-inbox voice-say browse-env; do
   if [[ -f "$KIT/bin/$b" ]]; then
     cp "$KIT/bin/$b" "$TARGET/.jarvis/bin/$b"
     chmod +x "$TARGET/.jarvis/bin/$b"

@@ -34,6 +34,7 @@ STALE when handover is older than one working day **and** NOW is non-empty
 
 ## Board
 
-`bin/heimdall serve` → `http://127.0.0.1:3847/index.html` (localhost only).
-`bin/heimdall project` refreshes `sidecars/heimdall/dist/state.json`.
-Do not invent agents to fill the Live panel.
+`bin/heimdall serve` / `bin/cockpit open` → `http://127.0.0.1:3847/`
+(React cockpit when present). Do not invent agents to fill the Live panel.
+A check-in is `POST /api/live/beat` or a file in `live/<id>.json`.
+Older than 90s → unknown.

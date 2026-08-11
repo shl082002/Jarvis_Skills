@@ -46,6 +46,13 @@ cmd="${1:-}"
 shift || true
 [[ -n "$cmd" ]] || usage
 
+# Living board replaces the static HTML when the cockpit sidecar is present.
+if [[ "$cmd" == "serve" || "$cmd" == "open" ]]; then
+  if [[ -x "$_HERE/cockpit" && -d "$KIT/sidecars/cockpit/api" ]]; then
+    exec "$_HERE/cockpit" "$cmd" "$@"
+  fi
+fi
+
 WR="$(find_workroom "${1:-}")"
 
 project() {

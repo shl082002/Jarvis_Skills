@@ -72,7 +72,7 @@ Jarvis_Skills/
 │   ├── heimdall/        situation glance (files, not a second tracker)
 │   └── voice/           local STT/TTS transport
 ├── assets/learning/     ← judgment cards (md only; invoked via teach)
-├── sidecars/            ← Heimdall board + voice notes (localhost)
+├── sidecars/            ← cockpit (FastAPI + React) + voice notes (localhost)
 ├── commands/            ← thin slash-command wrappers over the skills
 └── adapters/            ← how to wire the kit into each harness
     ├── claude-code.md

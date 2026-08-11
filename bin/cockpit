@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+# cockpit — living board (FastAPI + built React UI). 127.0.0.1 only.
+set -euo pipefail
+
+_HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_PARENT="$(cd "$_HERE/.." && pwd)"
+if [[ -d "$_PARENT/sidecars/cockpit/api" ]]; then
+  KIT="$_PARENT"
+elif [[ -d "$_PARENT/kit/sidecars/cockpit/api" ]]; then
+  KIT="$_PARENT/kit"
+else
+  echo "cockpit: sidecar not found" >&2
+  exit 1
+fi
+
+ROOT="$KIT/sidecars/cockpit"
+API="$ROOT/api"
+WEB="$ROOT/web"
+VENV="$ROOT/.venv"
+HOST="127.0.0.1"
+PORT="${COCKPIT_PORT:-${HEIMDALL_PORT:-3847}}"
+
+usage() {
+  echo "usage: cockpit serve [workroom] | open [workroom] | beat <id> [mission…]" >&2
+  exit 2
+}
+
+find_workroom() {
+  local start="${1:-}"
+  if [[ -n "$start" ]]; then
+    echo "$(cd "$start" && pwd)"
+    return
+  fi
+  local d
+  d="$(pwd)"
+  while [[ "$d" != "/" ]]; do
+    if [[ -d "$d/.jarvis" ]]; then
+      echo "$d/.jarvis"
+      return
+    fi
+    d="$(dirname "$d")"
+  done
+  echo "cockpit: no .jarvis workroom found" >&2
+  exit 1
+}
+
+ensure_venv() {
+  if [[ ! -x "$VENV/bin/python" ]]; then
+    python3 -m venv "$VENV"
+  fi
+  "$VENV/bin/pip" install -q -r "$API/requirements.txt"
+}
+
+ensure_ui() {
+  if [[ -f "$WEB/dist/index.html" ]]; then
+    return
+  fi
+  command -v npm >/dev/null 2>&1 || { echo "cockpit: npm required to build UI" >&2; exit 1; }
+  (cd "$WEB" && npm install && npm run build)
+}
+
+cmd="${1:-}"
+shift || true
+[[ -n "$cmd" ]] || usage
+
+case "$cmd" in
+  beat)
+    WR="$(find_workroom "")"
+    ID="${1:-}"
+    [[ -n "$ID" ]] || usage
+    shift || true
+    MISSION="${*:-cockpit}"
+    curl -sS -X POST "http://${HOST}:${PORT}/api/live/beat" \
+      -H 'content-type: application/json' \
+      -d "{\"id\":\"${ID}\",\"role\":\"assistant\",\"mission\":\"${MISSION}\",\"phase\":\"build\",\"status\":\"running\"}"
+    echo
+    ;;
+  serve|open)
+    WR="$(find_workroom "${1:-}")"
+    ensure_venv
+    ensure_ui
+    export JARVIS_WORKROOM="$WR"
+    echo "cockpit: $HOST:$PORT  workroom $WR"
+    echo "cockpit: bind $HOST only"
+    if [[ "$cmd" == "open" ]] && command -v open >/dev/null 2>&1; then
+      (sleep 0.6; open "http://${HOST}:${PORT}/") &
+    fi
+    cd "$API"
+    exec "$VENV/bin/uvicorn" app:app --host "$HOST" --port "$PORT"
+    ;;
+  *)
+    usage
+    ;;
+esac
