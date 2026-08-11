@@ -3,7 +3,16 @@
 # Binds 127.0.0.1 only. Not a second tracker.
 set -euo pipefail
 
-KIT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+_HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_PARENT="$(cd "$_HERE/.." && pwd)"
+if [[ -d "$_PARENT/sidecars/heimdall" ]]; then
+  KIT="$_PARENT"
+elif [[ -d "$_PARENT/kit/sidecars/heimdall" ]]; then
+  KIT="$_PARENT/kit"
+else
+  echo "heimdall: cannot find sidecars/heimdall (kit checkout or .jarvis/kit)" >&2
+  exit 1
+fi
 PY="$KIT/sidecars/heimdall/project.py"
 UI="$KIT/sidecars/heimdall"
 PORT="${HEIMDALL_PORT:-3847}"

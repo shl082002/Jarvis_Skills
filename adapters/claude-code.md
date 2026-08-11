@@ -12,7 +12,8 @@ From the target project root (or run `install.sh claude` to do all of this):
 | `commands/*.md` | `.claude/commands/` | `/boot`, `/day-close`, `/remember`, … |
 | `skills/*/SKILL.md` | `.claude/skills/<name>/SKILL.md` | auto-triggering skills |
 | `hooks/*.sh` | `.claude/hooks/` | gauntlet auto-summon (needs wiring — see below) |
-| `bin/*` | `.jarvis/bin/` | `svc` (services) and `gauntlet` (parallel sessions) |
+| `bin/*` | `.jarvis/bin/` + `.jarvis/kit/bin/` | `svc`, `gauntlet`, `heimdall`, `voice-*`, `browse-env` |
+| `sidecars/` | `.jarvis/kit/sidecars/` | Heimdall board + voice notes (localhost) |
 | `JARVIS.md` | project root (or `.claude/`) | referenced from CLAUDE.md |
 | (all of the above) | `.jarvis/kit/` | **portable stage** — same files Cursor/generic read |
 

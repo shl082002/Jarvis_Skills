@@ -24,14 +24,17 @@ echo "Installing Jarvis Skills ($HARNESS) into: $TARGET"
 # ---- The workroom (all harnesses) -------------------------------------------
 mkdir -p "$TARGET/.jarvis/memory" "$TARGET/.jarvis/chronicle" "$TARGET/.jarvis/reports" \
          "$TARGET/.jarvis/bin" "$TARGET/.jarvis/logs" "$TARGET/.jarvis/run" \
-         "$TARGET/.jarvis/live" "$TARGET/.jarvis/inbox"
+         "$TARGET/.jarvis/live" "$TARGET/.jarvis/inbox" "$TARGET/.jarvis/evidence"
 
 stub() { [[ -f "$1" ]] || printf '%s\n' "$2" > "$1"; }
 
 # Butler scripts are kit-owned code — refreshed on every install.
-cp "$KIT/bin/svc" "$TARGET/.jarvis/bin/svc"
-cp "$KIT/bin/gauntlet" "$TARGET/.jarvis/bin/gauntlet"
-chmod +x "$TARGET/.jarvis/bin/svc" "$TARGET/.jarvis/bin/gauntlet"
+for b in svc gauntlet heimdall voice-inbox voice-say browse-env; do
+  if [[ -f "$KIT/bin/$b" ]]; then
+    cp "$KIT/bin/$b" "$TARGET/.jarvis/bin/$b"
+    chmod +x "$TARGET/.jarvis/bin/$b"
+  fi
+done
 
 # NB: no gauntlet.repos stub on purpose — with no config the gauntlet auto-detects
 # sibling git repos and their dev lines. Write one only to override that.
@@ -65,7 +68,9 @@ stub "$TARGET/.jarvis/POLICY.md" "# PERMISSION POLICY — live. Edit freely; eve
   \`.jarvis/bin/gauntlet push-ok \"<what and why>\"\`. One grant, one push, 10 minutes.
 - Mainline pushes, force-pushes and sudo are refused even with a grant open.
 - Remote shells (ssh/scp/sftp/rsync) have no grant path — the principal runs those.
-# judgment_library: .jarvis/kit/assets/learning"
+# judgment_library: .jarvis/kit/assets/learning
+# heimdall: localhost
+# voice: off"
 
 stub "$TARGET/.jarvis/HANDOVER.md" "# HANDOVER — last updated: NEVER (fresh install)
 ## 1. Mission
@@ -89,7 +94,17 @@ stage_portable_kit() {
     mkdir -p "$TARGET/.jarvis/kit/assets"
     cp -R "$KIT/assets/." "$TARGET/.jarvis/kit/assets/"
   fi
-  echo "  + .jarvis/kit/{agents,commands,skills} staged (portable)"
+  if [[ -d "$KIT/sidecars" ]]; then
+    rm -rf "$TARGET/.jarvis/kit/sidecars"
+    cp -R "$KIT/sidecars" "$TARGET/.jarvis/kit/"
+  fi
+  if [[ -d "$KIT/bin" ]]; then
+    rm -rf "$TARGET/.jarvis/kit/bin"
+    mkdir -p "$TARGET/.jarvis/kit/bin"
+    cp -R "$KIT/bin/." "$TARGET/.jarvis/kit/bin/"
+    chmod +x "$TARGET/.jarvis/kit/bin/"* 2>/dev/null || true
+  fi
+  echo "  + .jarvis/kit/{agents,commands,skills,assets,sidecars,bin} staged (portable)"
 }
 
 # ---- The charter (all harnesses) --------------------------------------------

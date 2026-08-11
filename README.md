@@ -63,8 +63,16 @@ Jarvis_Skills/
 │   ├── council/         the dispatch playbook for the agent team
 │   ├── services/        the service registry — svc up/down/status, one file
 │   ├── gauntlet/        several sessions in parallel: fronts, stones, the Collect
-│   └── judgment-library/ on-demand mental-model cards (teach one topic)
+│   ├── judgment-library/ on-demand mental-model cards (teach one topic)
+│   ├── qa/              evidence-first walkthrough (EDITH)
+│   ├── investigate/     no fix without a theory (JOCASTA)
+│   ├── review/          bugs that pass CI
+│   ├── ideate/          founder forcing questions (DISCUSS)
+│   ├── browse/          headed browser — Cursor MCP first
+│   ├── heimdall/        situation glance (files, not a second tracker)
+│   └── voice/           local STT/TTS transport
 ├── assets/learning/     ← judgment cards (md only; invoked via teach)
+├── sidecars/            ← Heimdall board + voice notes (localhost)
 ├── commands/            ← thin slash-command wrappers over the skills
 └── adapters/            ← how to wire the kit into each harness
     ├── claude-code.md
@@ -90,6 +98,7 @@ project root — as its writable workroom:
 ├── kit/                 portable stage — agents, commands, skills, assets
 ├── live/                optional heartbeats (Heimdall)
 ├── inbox/               optional voice/sidecar utterances
+├── evidence/            browse/QA screenshots
 ├── chronicle/           YYYY-MM-DD/ dated plans, decisions, session closes
 └── reports/             full agent reports (the chat stays clean)
 ```

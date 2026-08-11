@@ -24,7 +24,7 @@ Re-run install; the glob picks it up.
 | `skills/<name>/SKILL.md` | `commands/<name>.md` if it is a typed/slash command; mention it in `README.md` tree; **re-run install for each harness you care about** |
 | `commands/<name>.md` | List the word in charter “command words” only if you change `JARVIS.md` (portable default). Project `JARVIS.md` House Config is never overwritten |
 | `agents/<name>.md` | One line in `skills/council/SKILL.md` |
-| `bin/<tool>` | `cp` it next to `svc`/`gauntlet` in `install.sh` (new *kind*) + document in all three adapters |
+| `bin/<tool>` | add the name to the `for b in svc gauntlet …` loop in `install.sh` + document in all three adapters |
 | `assets/…` | Nothing in install (directory copy is automatic) |
 | `sidecars/…` | New kind — update `install.sh` **and** `claude-code.md` / `cursor.md` / `generic.md` in the **same commit** |
 

@@ -18,8 +18,9 @@ whole system — an API loop, a new IDE, a CLI that doesn't exist yet.
 
 3. **Scaffold the workroom.** `install.sh generic` creates `.jarvis/` stubs and
    stages the full portable kit at `.jarvis/kit/` (agents, commands, skills,
-   assets). That directory is the same tree Claude and Cursor get — they only
-   add harness projections on top.
+   assets, sidecars, bin). That directory is the same tree Claude and Cursor
+   get — they only add harness projections on top. Heimdall and voice are
+   localhost sidecars; POLICY defaults `voice: off` and `heimdall: localhost`.
 
 4. **Roles as hats.** Without subagent support, specialists run inline: read
    `agents/<name>.md`, adopt its standing orders for the mission, write the
