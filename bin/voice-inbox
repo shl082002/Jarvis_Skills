@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# voice-inbox — write an utterance file. Untrusted input, same as chat.
+set -euo pipefail
+
+find_workroom() {
+  local d
+  d="$(pwd)"
+  while [[ "$d" != "/" ]]; do
+    if [[ -d "$d/.jarvis" ]]; then
+      echo "$d/.jarvis"
+      return
+    fi
+    d="$(dirname "$d")"
+  done
+  echo "voice-inbox: no .jarvis workroom" >&2
+  exit 1
+}
+
+WR="${1:-}"
+if [[ -n "$WR" && -d "$WR" && ( -d "$WR/inbox" || -f "$WR/POLICY.md" || "$(basename "$WR")" == ".jarvis" ) ]]; then
+  shift || true
+else
+  WR="$(find_workroom)"
+fi
+
+INBOX="$WR/inbox"
+mkdir -p "$INBOX"
+STAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+OUT="$INBOX/utterance.md"
+
+if [[ -t 0 && $# -eq 0 ]]; then
+  echo "usage: voice-inbox [workroom] <text…>   or pipe stdin" >&2
+  exit 2
+fi
+
+if [[ $# -gt 0 ]]; then
+  TEXT="$*"
+else
+  TEXT="$(cat)"
+fi
+
+{
+  printf '# utterance\n'
+  printf 'heard_at: %s\n' "$STAMP"
+  printf 'source: local-stt\n\n'
+  printf '%s\n' "$TEXT"
+} > "$OUT"
+
+# Keep a stamped copy so the next utterance does not erase evidence.
+cp "$OUT" "$INBOX/utterance-$STAMP.md"
+echo "$OUT"
