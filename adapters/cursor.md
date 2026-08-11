@@ -47,7 +47,7 @@ trigger mechanism changes.
    New artifact *kinds* need `install.sh` + this file + `claude-code.md` +
    `generic.md` in one commit. See `adapters/adding-surface.md`.
 
-7. **Sidecars.** Heimdall (`bin/heimdall serve` → `127.0.0.1:3847`) and voice
+7. **Sidecars.** Cockpit (`bin/cockpit open` → `127.0.0.1:3847`) and voice
    (`inbox/`, `voice: off` until POLICY flips) live under `.jarvis/kit/sidecars/`.
    Do not run `install.sh` just to peek at kit files — the checkout is enough.
    Re-install only when the principal wants the live projection refreshed.

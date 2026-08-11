@@ -1,22 +1,17 @@
 #!/usr/bin/env bash
-# heimdall — project the workroom to JSON and optionally serve the board.
-# Binds 127.0.0.1 only. Not a second tracker.
+# heimdall — glance helper. The board is the React cockpit (no static HTML).
 set -euo pipefail
 
 _HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 _PARENT="$(cd "$_HERE/.." && pwd)"
-if [[ -d "$_PARENT/sidecars/heimdall" ]]; then
+if [[ -d "$_PARENT/sidecars/cockpit/api" ]]; then
   KIT="$_PARENT"
-elif [[ -d "$_PARENT/kit/sidecars/heimdall" ]]; then
+elif [[ -d "$_PARENT/kit/sidecars/cockpit/api" ]]; then
   KIT="$_PARENT/kit"
 else
-  echo "heimdall: cannot find sidecars/heimdall (kit checkout or .jarvis/kit)" >&2
+  echo "heimdall: cockpit sidecar not found" >&2
   exit 1
 fi
-PY="$KIT/sidecars/heimdall/project.py"
-UI="$KIT/sidecars/heimdall"
-PORT="${HEIMDALL_PORT:-3847}"
-HOST="127.0.0.1"
 
 usage() {
   echo "usage: heimdall project [workroom] | serve [workroom] | open [workroom]" >&2
@@ -46,50 +41,14 @@ cmd="${1:-}"
 shift || true
 [[ -n "$cmd" ]] || usage
 
-# Living board replaces the static HTML when the cockpit sidecar is present.
-if [[ "$cmd" == "serve" || "$cmd" == "open" ]]; then
-  if [[ -x "$_HERE/cockpit" && -d "$KIT/sidecars/cockpit/api" ]]; then
-    exec "$_HERE/cockpit" "$cmd" "$@"
-  fi
-fi
-
-WR="$(find_workroom "${1:-}")"
-
-project() {
-  python3 "$PY" "$WR" "$KIT"
-}
-
 case "$cmd" in
-  project)
-    project
-    ;;
   serve|open)
-    STATE="$(project)"
-    # Serve the sidecar dir so /index.html and /dist/state.json both resolve.
-    echo "heimdall: $HOST:$PORT  (state $STATE)"
-    echo "heimdall: bind $HOST only — do not expose"
-    if [[ "$cmd" == "open" ]] && command -v open >/dev/null 2>&1; then
-      (sleep 0.4; open "http://${HOST}:${PORT}/index.html") &
-    fi
-    exec python3 - "$UI" "$HOST" "$PORT" <<'PY'
-import http.server, socketserver, sys
-from functools import partial
-
-root, host, port = sys.argv[1], sys.argv[2], int(sys.argv[3])
-
-class Handler(http.server.SimpleHTTPRequestHandler):
-    def log_message(self, fmt, *args):
-        sys.stderr.write("heimdall: " + (fmt % args) + "\n")
-
-    def end_headers(self):
-        self.send_header("Cache-Control", "no-store")
-        super().end_headers()
-
-socketserver.TCPServer.allow_reuse_address = True
-httpd = socketserver.TCPServer((host, port), partial(Handler, directory=root))
-print("heimdall: listening http://%s:%s/index.html" % (host, port), flush=True)
-httpd.serve_forever()
-PY
+    [[ -x "$_HERE/cockpit" ]] || { echo "heimdall: bin/cockpit missing" >&2; exit 1; }
+    exec "$_HERE/cockpit" "$cmd" "$@"
+    ;;
+  project)
+    WR="$(find_workroom "${1:-}")"
+    python3 "$KIT/sidecars/cockpit/api/project.py" "$WR"
     ;;
   *)
     usage

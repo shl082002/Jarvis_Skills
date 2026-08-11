@@ -7,6 +7,8 @@ import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
+from mode import read_mode
+
 STALE_HANDOVER_SECONDS = 24 * 60 * 60
 BEAT_FRESH_SECONDS = 90
 SKIP_LIVE = {"heimdall-state.json"}
@@ -159,6 +161,7 @@ def project(workroom: Path) -> dict:
         "services": svc_status(workroom),
         "reports": reports,
         "live": parse_live(workroom / "live"),
+        "mode": read_mode(workroom),
         "kit_health": {
             "handover_mtime": iso_mtime(handover),
             "handover_age_seconds": int(ho_age) if ho_age is not None else None,
@@ -167,3 +170,13 @@ def project(workroom: Path) -> dict:
             "beat_fresh_seconds": BEAT_FRESH_SECONDS,
         },
     }
+
+
+if __name__ == "__main__":
+    import json
+    import sys
+
+    if len(sys.argv) < 2:
+        print("usage: project.py <workroom>", file=sys.stderr)
+        raise SystemExit(2)
+    print(json.dumps(project(Path(sys.argv[1]).resolve()), indent=2))
