@@ -39,6 +39,5 @@ real system (`skills/verify-live/`). “I navigated” without a file is CLAIMED
 
 ## Optional daemon
 
-Persistent headed Chromium (`$B connect`) is a separate adapter, off unless
-asked. Binary stays **outside** the kit. If `references/daemon.md` exists,
-that is the only setup path.
+Persistent headed Chromium (`$B connect`) is off unless asked. Setup:
+`references/daemon.md` and `bin/browse-env`. Binary stays **outside** the kit.
