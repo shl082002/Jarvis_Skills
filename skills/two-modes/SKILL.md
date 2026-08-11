@@ -5,6 +5,11 @@ description: The DISCUSS/BUILD mode discipline — which words switch modes, wha
 
 # Two Modes — the collaboration's gearbox
 
+If `WORKROOM/MODE.md` exists, treat its `mode:` line as the **standing gear**
+(discuss / plan / build) until the principal's **words** override it. Plan is
+still DISCUSS: lock the plan, do not write product code. The cockpit switch
+only writes that file — it does not launch agents.
+
 The partnership runs in exactly two modes, and **the principal's words switch
 them** — never the assistant's enthusiasm. Getting the mode wrong is the fastest
 way to lose trust in both directions: code during a discussion wastes their

@@ -8,14 +8,23 @@ export type LiveAgent = {
   last_beat: string;
 };
 
+export type ServiceItem = {
+  name: string;
+  status: string;
+  detail: string;
+};
+
 export type CockpitState = {
   generated_at: string;
   workroom: string;
   mission: string;
   next_task: string;
+  mode: string;
+  watching: number;
   lanes: { now: string[]; awaiting: string[]; awaiting_count: number };
   branches: string[];
   services: string;
+  service_board: { items: ServiceItem[]; note?: string };
   reports: { name: string; mtime: string | null }[];
   live: LiveAgent[];
   kit_health: {

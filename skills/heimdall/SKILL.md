@@ -38,3 +38,7 @@ STALE when handover is older than one working day **and** NOW is non-empty
 (React cockpit when present). Do not invent agents to fill the Live panel.
 A check-in is `POST /api/live/beat` or a file in `live/<id>.json`.
 Older than 90s → unknown.
+
+Cockpit face: **Watching** = open browser sockets (you), not workers.
+Mode switch writes `MODE.md`. HAPPY panel calls `bin/svc` for registered
+names only. Empty registry is honest greenfield, not fake services.
