@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# voice-say — macOS say(1) for a one-line wrap. Silent unless POLICY has voice: on.
+set -euo pipefail
+
+find_workroom() {
+  local d
+  d="$(pwd)"
+  while [[ "$d" != "/" ]]; do
+    if [[ -d "$d/.jarvis" ]]; then
+      echo "$d/.jarvis"
+      return
+    fi
+    d="$(dirname "$d")"
+  done
+  echo ""
+}
+
+WR="${VOICE_WORKROOM:-}"
+if [[ -z "$WR" ]]; then
+  WR="$(find_workroom)"
+fi
+
+enabled() {
+  [[ -n "$WR" && -f "$WR/POLICY.md" ]] || return 1
+  grep -Eq '^[[:space:]]*voice:[[:space:]]*on\b' "$WR/POLICY.md"
+}
+
+if ! enabled; then
+  echo "voice-say: skipped (set 'voice: on' in WORKROOM/POLICY.md)" >&2
+  exit 0
+fi
+
+if [[ $# -eq 0 ]]; then
+  echo "usage: voice-say <one line>" >&2
+  exit 2
+fi
+
+if ! command -v say >/dev/null 2>&1; then
+  echo "voice-say: say(1) not found" >&2
+  exit 1
+fi
+
+# One line only — reports stay in files.
+LINE="$(printf '%s' "$*" | tr '\n' ' ' | cut -c1-280)"
+exec say "$LINE"
