@@ -11,7 +11,7 @@ see the same skills, commands, agents, and assets after `install.sh`.
 - `commands/*.md`
 - `skills/*/SKILL.md`
 - `hooks/*.sh` (Claude projection)
-- `bin/svc`, `bin/gauntlet` (workroom)
+- `bin/svc`, `bin/gauntlet`, `bin/heimdall`, `bin/cockpit`, `bin/voice-inbox`, `bin/voice-say`, `bin/browse-env`
 - `assets/` if the directory exists
 
 **Do not** add a per-skill `cp` line for a new `skills/foo/` or `commands/foo.md`.

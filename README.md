@@ -14,11 +14,10 @@ was paid for with an actual mistake or ratified from an actual win.
 
 ## The core idea
 
-An AI agent's context window is amnesia with good manners. Everything that matters must
-therefore live in **files**: what we know (memory), where things are (atlas), what
-branches exist (ledger), what was decided (chronicle), and what to do next (handover).
-The agent's job is to keep those files true; the human's job is to make the calls.
-Any agent that can read files can pick up the baton — mid-task, mid-day, mid-year.
+An AI agent's context window is amnesia with good manners. **Doctrine and the baton
+live in files** (memory, atlas, ledger, chronicle, handover). **Runtime task identity**
+(Task, AgentRun, Event, Approval) lives in a portable SQLite file in the workroom.
+The agent's job is to keep both true; the human's job is to make the calls.
 
 Three loyalties, in order:
 

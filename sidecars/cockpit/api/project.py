@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import json
 import re
-import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -111,23 +110,6 @@ def parse_live(live_dir: Path) -> list[dict]:
     return out
 
 
-def svc_status(workroom: Path) -> str:
-    svc = workroom / "bin" / "svc"
-    if not svc.is_file():
-        return "unknown"
-    try:
-        result = subprocess.run(
-            [str(svc), "status"],
-            capture_output=True,
-            text=True,
-            timeout=8,
-        )
-        text = (result.stdout or result.stderr or "").strip()
-        return text[:2000] if text else "unknown"
-    except (OSError, subprocess.TimeoutExpired):
-        return "unknown"
-
-
 def project(workroom: Path) -> dict:
     handover = workroom / "HANDOVER.md"
     tracker = workroom / "TRACKER.md"
@@ -158,7 +140,7 @@ def project(workroom: Path) -> dict:
             "awaiting_count": len(awaiting),
         },
         "branches": [ln.rstrip() for ln in le.splitlines() if ln.strip()][:24],
-        "services": svc_status(workroom),
+        "services": "tcp",
         "reports": reports,
         "live": parse_live(workroom / "live"),
         "mode": read_mode(workroom),

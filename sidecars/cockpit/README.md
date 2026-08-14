@@ -1,16 +1,19 @@
-# Cockpit — living board
+# Cockpit — Mission Control
 
-Portable kit face. FastAPI reads the **target** `.jarvis/` workroom.
-React draws it. No database. Voice is not in this slice.
+Portable kit face. FastAPI projects the target `.jarvis/` workroom.
+Doctrine stays Markdown. **Task / AgentRun / Event / Approval** live in
+`.jarvis/control.db` (SQLite, created on first serve). TRACKER.md is generated
+from Tasks. React draws Mission Control (Command / Signal / Atelier by occasion).
 
 ```bash
-# from a project that has .jarvis/
 <path-to-kit>/bin/cockpit open
 # http://127.0.0.1:3847/
 ```
 
-Live panel shows `live/<id>.json` only. Missing or older than 90s → unknown.
-Check in:
+Do **not** put an HTTP `health:` URL on the cockpit service in `services.yml` —
+compose uses TCP-only so the worker cannot deadlock on itself.
+
+Check in a run:
 
 ```bash
 curl -sS -X POST http://127.0.0.1:3847/api/live/beat \

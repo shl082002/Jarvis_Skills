@@ -70,7 +70,9 @@ stub "$TARGET/.jarvis/POLICY.md" "# PERMISSION POLICY — live. Edit freely; eve
 - Remote shells (ssh/scp/sftp/rsync) have no grant path — the principal runs those.
 # judgment_library: .jarvis/kit/assets/learning
 # heimdall: localhost
-# voice: off"
+# voice: off
+# control_plane: sqlite
+# verify: on_command"
 
 stub "$TARGET/.jarvis/HANDOVER.md" "# HANDOVER — last updated: NEVER (fresh install)
 ## 1. Mission
