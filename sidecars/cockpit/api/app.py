@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import Optional
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -94,7 +95,7 @@ class BeatIn(BaseModel):
     mission: str = ""
     phase: str = "build"
     status: str = "running"
-    task_id: str | None = None
+    task_id: Optional[str] = None
 
 
 @app.post("/api/live/beat")
@@ -163,11 +164,11 @@ class TaskIn(BaseModel):
 
 
 class TaskPatch(BaseModel):
-    title: str | None = None
-    lane: str | None = None
-    status: str | None = None
-    owner: str | None = None
-    next_action: str | None = None
+    title: Optional[str] = None
+    lane: Optional[str] = None
+    status: Optional[str] = None
+    owner: Optional[str] = None
+    next_action: Optional[str] = None
 
 
 @app.get("/api/tasks")
