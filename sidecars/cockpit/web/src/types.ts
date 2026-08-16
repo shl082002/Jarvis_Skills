@@ -56,9 +56,20 @@ export type CockpitState = {
   service_board: { items: ServiceItem[]; note?: string };
   reports: { name: string; mtime: string | null }[];
   live: LiveAgent[];
+  fleet?: string[];
+  dispatch?: {
+    action: string;
+    run_id: string;
+    task_id?: string;
+    agent_id: string;
+    mission?: string;
+    hands?: string;
+    at?: string;
+  } | null;
   kit_health: {
     stale: boolean;
     status: string;
     beat_fresh_seconds: number;
   };
+  gauntlet?: { on: boolean; reason: string };
 };

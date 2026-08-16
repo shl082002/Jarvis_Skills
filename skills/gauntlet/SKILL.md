@@ -1,14 +1,36 @@
 ---
 name: gauntlet
-description: Running several assistant sessions in parallel across shared repos — fronts, worktree locks, the Infinity Stones, cross-front coordination, timing and status, and the Collect. Use when work splits into independent initiatives, before opening a gauntlet, and when a parallel run feels uncoordinated or opaque.
+description: Parallel sessions (fronts) — ONLY after the principal manually declares a gauntlet. Never open one because work looks independent. Use for gauntlet open/close/status/collect, or to refuse an undeclared gauntlet.
 ---
 
 # 🧤 The Gauntlet
 
 **Several sessions. Own worktrees. One stack. One board.**
 
-Ordinary practice — not an emergency, no ceremony, no special powers. The fleet is
+Ordinary practice **once declared** — not an emergency, no ceremony, no special powers. The fleet is
 fully available throughout. *(Charter law 19.)*
+
+## 0 · Declaration — principal only (the gate)
+
+**Default is OFF.** One session, ordinary charter. There is no gauntlet until the
+principal **declares** one, for example:
+
+- Mission Control header: **Gauntlet Off / On** (same flag as the CLI)
+- typed command `gauntlet` (open)
+- “open the gauntlet” / “declare a gauntlet”
+- instruct `gauntlet open "<reason>"`
+
+The assistant **never** opens one because work looks parallel, because the tracker
+has several NOW items, because another Cursor chat exists, or because boot felt
+busy. Independent work in a **single** session is still a single session.
+
+If the work *could* split: **recommend** a gauntlet in one sentence, then wait.
+Do not write `BOARD.md`, do not `gauntlet open`, do not enlist, do not cut
+worktrees. Hooks are silent while `.jarvis/run/GAUNTLET_ACTIVE` is absent.
+
+Fronts are a second declaration: even with a gauntlet open, a front exists only
+when the principal names it (`enlist` / “you are THOR”). Sessions do **not**
+auto-take empty seats.
 
 > Proven in **GAUNTLET-00** — 3 fronts, 3 repos, 6 worktrees, ~44 commits, 2 fronts
 > landed end-to-end in a day, **zero collisions**. Everything below that reads like a
@@ -20,15 +42,15 @@ fully available throughout. *(Charter law 19.)*
 
 ## 1 · When to open one
 
-Open a gauntlet when work splits into **genuinely independent initiatives** — different
-subsystems, different files, no shared dependency chain.
+**Only when the principal declares it.** Capability check (so you can recommend,
+not so you can start): work splits into **genuinely independent initiatives** —
+different subsystems, different files, no shared dependency chain.
 
 **Do not** open one to parallelise *steps of one thing*. Stages of a single chain are a
 pipeline, not a gauntlet: the second front will sit blocked on the first, and you will
 have paid all the coordination cost for none of the parallelism.
 
-Sizing: fronts should be **disjoint in territory** and **comparable in weight**. A front
-that finishes in an hour makes the Collect cheap; a front that sprawls makes it expensive.
+If they have not declared: stay in one session. Sizing talk waits until they say open.
 
 ---
 
@@ -110,15 +132,15 @@ hooks keep every session's identity true without him ever briefing one:
 
 | when | hook | what it does |
 |---|---|---|
-| a **new** session starts | `SessionStart` | takes a free seat if one waits; else *"unseated — awaiting his ask"* **with the enlist line, session id filled in** |
-| **every prompt**, all sessions | `UserPromptSubmit` | re-states who this session is, or how to enlist |
+| a **new** session starts | `SessionStart` | if already bound, re-state the front; else *"unseated — awaiting his ask"* **with the enlist line**. **Never auto-takes a seat.** |
+| **every prompt**, all sessions | `UserPromptSubmit` | re-states who this session is, or how to enlist — **only while a gauntlet is declared** |
 
 Two hooks and not one, because each covers what the other cannot: `SessionStart` fires
 once and misses every session that was already running; `UserPromptSubmit` fires forever
 and is what makes a running session summonable and a **compacted** one self-healing.
 
 Seats are exclusive and claimed **atomically** (`set -C` noclobber, keyed on
-`session_id`), so simultaneous starts cannot double-book one front. An occupied seat is
+`session_id`) **on enlist**, so simultaneous starts cannot double-book one front. An occupied seat is
 never silently taken over — freeing it is a deliberate `unbind`.
 
 ### How many?

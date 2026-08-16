@@ -9,9 +9,11 @@ from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-from watchfiles import awatch
+from watchfiles import Change, awatch
 
 from beat import write_beat
+from dispatch import deploy_run, explain_run, read_dispatch, stop_run, write_principal_reply
+from gauntlet_flag import read_gauntlet, set_gauntlet
 from mode import write_mode
 from project import project
 from room import room
@@ -68,6 +70,9 @@ def compose() -> dict:
         waiting = next((t for t in tasks if t.get("status") == "waiting_for_user"), None)
         room_state["waiting"] = waiting
         room_state["service_board"] = list_services(wr, tcp_only=True)
+        room_state["dispatch"] = read_dispatch(wr)
+        room_state["fleet"] = ["dum-e", "u", "jocasta", "friday", "edith", "pepper", "happy"]
+        room_state["gauntlet"] = read_gauntlet(wr)
     else:
         room_state["tasks"] = []
         room_state["runs"] = []
@@ -75,6 +80,9 @@ def compose() -> dict:
         room_state["occasion"] = "away"
         room_state["waiting"] = None
         room_state["service_board"] = {"items": []}
+        room_state["dispatch"] = None
+        room_state["fleet"] = []
+        room_state["gauntlet"] = {"on": False, "reason": ""}
     room_state["watching"] = room.watching
     return room_state
 
@@ -136,6 +144,20 @@ def set_mode(body: ModeIn) -> dict:
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     return {"ok": True, "path": str(path), "mode": body.mode.strip().lower()}
+
+
+class GauntletIn(BaseModel):
+    on: bool
+    reason: str = ""
+
+
+@app.post("/api/gauntlet")
+def set_gauntlet_switch(body: GauntletIn) -> dict:
+    try:
+        state = set_gauntlet(_workroom(), body.on, body.reason)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return {"ok": True, **state}
 
 
 @app.get("/api/services")
@@ -249,6 +271,9 @@ def task_not_now(task_id: str) -> dict:
             next_action="revisit: principal said not now",
         )
         export_tracker(wr)
+        write_principal_reply(
+            wr, task_id=task_id, text="not now", parked=True
+        )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     return {"ok": True, "task": task}
@@ -268,9 +293,109 @@ def task_resume(task_id: str) -> dict:
             next_action="resumed",
         )
         export_tracker(wr)
+        write_principal_reply(wr, task_id=task_id, text="resumed from the board")
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     return {"ok": True, "task": task}
+
+
+class AnswerIn(BaseModel):
+    text: str = Field(default="", max_length=2000)
+    park: bool = False
+
+
+@app.post("/api/tasks/{task_id}/answer")
+def task_answer(task_id: str, body: AnswerIn) -> dict:
+    wr = _workroom()
+    if not get_task(wr, task_id):
+        raise HTTPException(404, "unknown task")
+    clipped = (body.text or "").strip()[:2000]
+    try:
+        if body.park:
+            task = update_task(
+                wr,
+                task_id,
+                status="parked",
+                lane="parked",
+                next_action="revisit: principal said not now",
+            )
+            inbox = write_principal_reply(
+                wr, task_id=task_id, text=clipped or "not now", parked=True
+            )
+        else:
+            if not clipped:
+                raise HTTPException(400, "empty ruling")
+            task = update_task(
+                wr,
+                task_id,
+                status="running",
+                lane="now",
+                next_action=clipped[:500],
+            )
+            inbox = write_principal_reply(wr, task_id=task_id, text=clipped)
+        export_tracker(wr)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return {"ok": True, "task": task, "dispatch": inbox}
+
+
+class DeployIn(BaseModel):
+    task_id: str = Field(min_length=1, max_length=32)
+    agent_id: str = Field(min_length=1, max_length=64)
+    mission: str = ""
+
+
+@app.post("/api/runs/deploy")
+def runs_deploy(body: DeployIn) -> dict:
+    wr = _workroom()
+    _ensure_store(wr)
+    try:
+        out = deploy_run(wr, task_id=body.task_id, agent_id=body.agent_id, mission=body.mission)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return {"ok": True, **out}
+
+
+@app.post("/api/runs/{run_id}/stop")
+def runs_stop(run_id: str) -> dict:
+    wr = _workroom()
+    try:
+        out = stop_run(wr, run_id)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return {"ok": True, **out}
+
+
+@app.get("/api/runs/{run_id}/explain")
+def runs_explain(run_id: str) -> dict:
+    wr = _workroom()
+    try:
+        return {"ok": True, **explain_run(wr, run_id)}
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+WATCH_FILES = {
+    "MODE.md",
+    "HANDOVER.md",
+    "TRACKER.md",
+    "MEMORY.md",
+    "LEDGER.md",
+    "services.yml",
+    "control.db",
+    "dispatch.json",
+    "GAUNTLET_ACTIVE",
+}
+WATCH_DIRS = {"live", "reports"}
+
+
+def _watch_filter(_change: Change, path: str) -> bool:
+    name = Path(path).name
+    if name.endswith(("-journal", ".pyc", ".log")):
+        return False
+    if name in WATCH_FILES:
+        return True
+    return any(part in WATCH_DIRS for part in Path(path).parts)
 
 
 @app.websocket("/api/stream")
@@ -282,7 +407,7 @@ async def stream(ws: WebSocket) -> None:
     await room.join(ws)
     await room.broadcast(compose())
     try:
-        async for _ in awatch(WORKROOM, recursive=True):
+        async for _ in awatch(WORKROOM, recursive=True, watch_filter=_watch_filter):
             await room.broadcast(compose())
     except WebSocketDisconnect:
         pass

@@ -11,6 +11,17 @@ export function useCockpit(): CockpitState | null {
 
   useEffect(() => {
     let cancelled = false;
+    const pull = () => {
+      void fetch("/api/state")
+        .then((r) => r.json())
+        .then((next: CockpitState) => {
+          if (!cancelled) {
+            setState(next);
+          }
+        })
+        .catch(() => undefined);
+    };
+    pull();
     const socket = new WebSocket(wsUrl());
     socket.onmessage = (event) => {
       try {
@@ -22,19 +33,12 @@ export function useCockpit(): CockpitState | null {
         /* ignore bad frames */
       }
     };
-    const poll = window.setInterval(() => {
-      void fetch("/api/state")
-        .then((r) => r.json())
-        .then((next: CockpitState) => {
-          if (!cancelled) {
-            setState(next);
-          }
-        })
-        .catch(() => undefined);
-    }, 4000);
+    window.addEventListener("jarvis-refresh", pull);
+    const poll = window.setInterval(pull, 4000);
     return () => {
       cancelled = true;
       socket.close();
+      window.removeEventListener("jarvis-refresh", pull);
       window.clearInterval(poll);
     };
   }, []);

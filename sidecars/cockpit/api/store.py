@@ -17,7 +17,7 @@ TASK_STATUSES = (
     "failed",
     "parked",
 )
-RUN_STATUSES = ("running", "idle", "done", "failed", "waiting_for_user")
+RUN_STATUSES = ("queued", "running", "idle", "done", "failed", "waiting_for_user", "stopped")
 TASK_ID_RE = re.compile(r"^T-\d+$")
 
 SCHEMA = """
@@ -242,12 +242,14 @@ def upsert_run(
     try:
         existing = conn.execute("SELECT * FROM agent_runs WHERE id = ?", (slug,)).fetchone()
         if existing:
+            ended = ts if status in {"stopped", "done", "failed"} else None
             conn.execute(
                 """UPDATE agent_runs SET task_id=COALESCE(?, task_id), role=COALESCE(NULLIF(?,''), role),
                    mission=COALESCE(NULLIF(?,''), mission), phase=?, status=?,
-                   report_path=COALESCE(NULLIF(?,''), report_path), last_beat_at=?
+                   report_path=COALESCE(NULLIF(?,''), report_path), last_beat_at=?,
+                   ended_at=COALESCE(?, ended_at)
                    WHERE id=?""",
-                (task_id, role, mission, phase, status, report_path, ts, slug),
+                (task_id, role, mission, phase, status, report_path, ts, ended, slug),
             )
         else:
             conn.execute(
@@ -284,10 +286,9 @@ def recent_events(workroom: Path, limit: int = 40) -> list[dict]:
 
 
 def derive_occasion(tasks: list[dict], runs: list[dict]) -> str:
+    """Locked mix: crisis if waiting, deep if a run is live, else away. Showcase is not auto."""
     if any(t.get("status") == "waiting_for_user" for t in tasks):
         return "crisis"
-    if any(r.get("status") == "running" for r in runs):
+    if any(r.get("status") in {"running", "queued"} for r in runs):
         return "deep"
-    if any(t.get("lane") == "now" for t in tasks):
-        return "showcase"
     return "away"

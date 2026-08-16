@@ -1,6 +1,7 @@
 """HAPPY via bin/svc. Registry names only — no arbitrary shell."""
 from __future__ import annotations
 
+import os
 import re
 import socket
 import subprocess
@@ -118,11 +119,26 @@ def list_services(workroom: Path, *, tcp_only: bool = False) -> dict:
     return {"items": items, "ok": code == 0, "raw": text[:2000]}
 
 
+def _board_port() -> str:
+    return os.environ.get("COCKPIT_PORT") or os.environ.get("HEIMDALL_PORT") or "3847"
+
+
 def control(workroom: Path, name: str, action: str) -> dict:
     if not NAME_RE.match(name) or name not in _names(workroom):
         raise ValueError("unknown service")
     if action not in {"up", "down", "restart"}:
         raise ValueError("action must be up, down, or restart")
+    port = _field(workroom, name, "port")
+    if action in {"down", "restart"} and port == _board_port():
+        raise ValueError(
+            "cannot stop Mission Control from its own face — that kills the board. Use the terminal."
+        )
+    if action == "up" and port and _port_listening(port):
+        return {
+            "ok": True,
+            "output": f"{name} already listening :{port}",
+            **list_services(workroom, tcp_only=True),
+        }
     timeout = 90 if action != "down" else 30
     code, text = _run(workroom, [action, name], timeout=timeout)
     return {"ok": code == 0, "output": text[:4000], **list_services(workroom, tcp_only=True)}

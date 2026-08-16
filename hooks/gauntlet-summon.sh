@@ -1,5 +1,9 @@
 #!/bin/bash
-# SessionStart hook — AUTO-SUMMON (charter law 19 / the Gauntlet).
+# SessionStart hook — identity while a gauntlet is DECLARED (charter law 19).
+#
+# Closed gauntlet = ordinary charter. Say nothing, cost nothing.
+# Open gauntlet: resume a bound seat, or stay UNSEATED until the principal
+# names a front (enlist). Never auto-take an empty seat.
 #
 # THE PROBLEM THIS SOLVES
 # The UserPromptSubmit broadcast (gauntlet-reminder.sh) tells every session that a
@@ -77,20 +81,10 @@ if [ -s "$SESSIONS/$SID" ]; then
   if [ "$FRONT" != "heimdall" ] && [ ! -f "$DIR/$FRONT.md" ]; then FRONT=""; rm -f "$SESSIONS/$SID"; fi
 fi
 
-# ② Otherwise take the lowest-order free seat, atomically.
+# ② Already bound? Resume and compact land here — the session re-learns itself.
+#    Do NOT auto-take a free seat. Fronts are enlisted on the principal's ask.
 if [ -z "$FRONT" ]; then
-  for s in $(seats); do
-    if ( set -C; printf '%s\n' "$SID" > "$CLAIMS/$s" ) 2>/dev/null; then
-      FRONT="$s"; printf '%s\n' "$s" > "$SESSIONS/$SID"
-      # Mirror into the brief so a human reading the file sees it is manned.
-      if grep -q '^session:' "$DIR/$s.md" 2>/dev/null; then
-        sed -i '' "s|^session:.*|session: CLAIMED $(date '+%d %b %H:%M') (${SRC:-startup})|" "$DIR/$s.md" 2>/dev/null || true
-      fi
-      break
-    fi
-    # Non-empty claim by a dead session is NOT auto-reaped: a stale claim is
-    # cheap to clear by hand, a double-manned seat is a collision.
-  done
+  : # stay unseated
 fi
 
 bearer() { if [ -s "$STONES/$1" ]; then head -n1 "$STONES/$1" | cut -d'|' -f1; else echo "free"; fi; }

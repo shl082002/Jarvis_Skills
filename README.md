@@ -69,7 +69,8 @@ Jarvis_Skills/
 │   ├── ideate/          founder forcing questions (DISCUSS)
 │   ├── browse/          headed browser — Cursor MCP first
 │   ├── heimdall/        situation glance (files, not a second tracker)
-│   └── voice/           local STT/TTS transport
+│   ├── voice/           local STT/TTS transport
+│   └── mission-control/ lights on/off including the board; Deploy is dispatch
 ├── assets/learning/     ← judgment cards (md only; invoked via teach)
 ├── sidecars/            ← cockpit (FastAPI + React) + voice notes (localhost)
 ├── commands/            ← thin slash-command wrappers over the skills

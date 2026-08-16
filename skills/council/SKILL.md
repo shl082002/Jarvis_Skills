@@ -5,7 +5,7 @@ description: The dispatch playbook for the workshop team — which agent for whi
 
 # Council — running the workshop team
 
-Six specialists, one assistant, one principal. The assistant is the only voice the
+Seven specialists, one assistant, one principal. The assistant is the only voice the
 principal hears; the team works through missions and reports (see
 `skills/playground/`). Definitions live in `agents/`.
 
@@ -19,10 +19,11 @@ principal hears; the team works through missions and reports (see
 | **FRIDAY** | Build Commander | writes code, isolated worktrees | a design is LOCKED and sliced — she implements, verifies per slice, never redesigns |
 | **EDITH** | Verification Cmdr | drives live systems | the principal has ASKED for machine verification of a falsifiable claim (charter law 15 — never auto-launch) |
 | **PEPPER** | Product Owner | drives the app, reads code | you need customer eyes — journey grading, UX/copy audit, falsifiable acceptance criteria |
+| **HAPPY** | Ops Butler | services, ports, env | wake/sleep including Mission Control; port contests; boot diagnosis. Never product code or git |
 
 The escalation ladder for questions: **DUM-E** (what/where) → **JOCASTA** (why) →
 **EDITH** (is it true live). Don't send a researcher to fetch a line number or a
-scout to explain a failure.
+scout to explain a failure. Don't send FRIDAY to flip ports — that is HAPPY.
 
 ## Playbooks (typed commands)
 
@@ -32,6 +33,7 @@ scout to explain a failure.
 | `investigate` | `skills/investigate/` | JOCASTA | `reports/<date>-jocasta-investigate-<slug>.md` |
 | `review` | `skills/review/` | assistant / EDITH | `reports/<date>-review-<slug>.md` |
 | `ideate` | `skills/ideate/` | PEPPER | chronicle plan, not a report binge |
+| `lights` | `skills/mission-control/` | HAPPY | `svc lights on\|off` — includes cockpit |
 
 Law 15: do not launch EDITH/QA because a build finished. Investigate never
 fixes. Review never ships.
@@ -78,3 +80,6 @@ One agent, one mission. Parallel missions must not share a working tree
   spirit) what friction they hit; process improvements the principal ratifies
   get stamped into the agent definitions as numbered standing orders. The team
   is part of the system of record too.
+- **Deploy is a dispatch.** When the principal or Mission Control Deploys a
+  named fleet agent, **launch that agent**. The assistant does not type the
+  slice. “Owns the outcome” is command, not costume.

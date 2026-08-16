@@ -182,7 +182,7 @@ cmd_open() {
   for s in $STONE_NAMES; do : > "$STONES/$s"; done
   rm -f "$CLAIMS"/* "$SESSIONS"/* 2>/dev/null   # a new gauntlet starts with every seat free
   say "🧤 ${c_grn}GAUNTLET OPEN${c_off} — broadcast to every session via the hook."
-  say "   Seats are free: the next session to start auto-takes the lowest-order front."
+  say "   Seats stay empty until he enlists a front. Sessions do not auto-take seats."
   say "   Declare a Collect time on the board. Close with: gauntlet close"
 }
 

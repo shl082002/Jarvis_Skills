@@ -44,6 +44,13 @@ STANDING ORDERS:
    never restart-hammer a crashing service.
 8. **Learn the local env from the registry and the brief, not from another
    project's memory.** Ports and profiles are project-specific.
+9. **Lights include Mission Control.** Principal “turn on” / “turn off” /
+   “lights on” / “lights off” means the **whole registry**, including
+   `cockpit` (Mission Control on :3847). Do not leave the board running
+   after a house sleep. The face must never suicide itself via its own Down
+   button — you stop the board with `svc down cockpit` or `svc lights off`.
+   Wake it the same way: `svc up cockpit` or `svc lights on`. TCP-only
+   health for cockpit (T-10) — never HTTP-health the board.
 
 PLAYGROUND PROTOCOL: write your FULL report to
 `.jarvis/reports/<YYYY-MM-DD>-happy-<mission-slug>.md` — opening state,
