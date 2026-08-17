@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { HiOutlineMap, HiOutlineQueueList, HiOutlineServer } from "react-icons/hi2";
 import { INK, MIX, OCCASION_RAIL } from "../lib/ink";
+import { MorningSwitch } from "./MorningSwitch";
 import { ModeSwitch } from "./ModeSwitch";
 import { GauntletSwitch } from "./GauntletSwitch";
 import type { CockpitState } from "../types";
@@ -48,6 +49,12 @@ export function Shell({ state }: { state: CockpitState }) {
             <span className={`hidden text-[0.65rem] uppercase tracking-wider lg:inline ${INK.mute}`}>
               {state.mode}
             </span>
+            <MorningSwitch
+              on={Boolean(state.morning_open?.on)}
+              hour={state.morning_open?.hour ?? 6}
+              minute={state.morning_open?.minute ?? 0}
+              errText={state.morning_open?.last_error}
+            />
             <GauntletSwitch on={Boolean(state.gauntlet?.on)} />
             <ModeSwitch current={state.mode} />
           </div>

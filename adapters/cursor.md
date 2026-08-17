@@ -52,7 +52,12 @@ trigger mechanism changes.
    Do not run `install.sh` just to peek at kit files — the checkout is enough.
    Re-install only when the principal wants the live projection refreshed.
 
-8. **House Config.** If `JARVIS.md` already exists, install **never replaces**
+8. **Morning OPEN + Cursor wake.** `bin/morning-open` is copied into `.jarvis/bin`
+   on install. Arm **Morning** on the board (Off default) — that writes a user
+   launchd job. Cursor also gets `.cursor/hooks/mc-dispatch-stop.py` for Deploy
+   and Telegram rulings (hooks.json created only if missing).
+
+9. **House Config.** If `JARVIS.md` already exists, install **never replaces**
    it. Cursor’s always-on charter is copied from that project file.
 
 ## Cautions

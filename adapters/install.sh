@@ -29,7 +29,7 @@ mkdir -p "$TARGET/.jarvis/memory" "$TARGET/.jarvis/chronicle" "$TARGET/.jarvis/r
 stub() { [[ -f "$1" ]] || printf '%s\n' "$2" > "$1"; }
 
 # Butler scripts are kit-owned code — refreshed on every install.
-for b in svc gauntlet heimdall cockpit voice-inbox voice-say browse-env; do
+for b in svc gauntlet heimdall cockpit voice-inbox voice-say browse-env morning-open; do
   if [[ -f "$KIT/bin/$b" ]]; then
     cp "$KIT/bin/$b" "$TARGET/.jarvis/bin/$b"
     chmod +x "$TARGET/.jarvis/bin/$b"
@@ -260,6 +260,29 @@ case "$HARNESS" in
       } > "$TARGET/.cursor/rules/$name.mdc"
     done
     echo "  + .cursor/rules populated (charter always-on, skills on-demand)"
+    mkdir -p "$TARGET/.cursor/hooks"
+    if [[ -f "$KIT/hooks/mc-dispatch-stop.py" ]]; then
+      cp "$KIT/hooks/mc-dispatch-stop.py" "$TARGET/.cursor/hooks/mc-dispatch-stop.py"
+      chmod +x "$TARGET/.cursor/hooks/mc-dispatch-stop.py"
+      echo "  + .cursor/hooks/mc-dispatch-stop.py (Deploy + Telegram ruling wake)"
+    fi
+    if [[ ! -f "$TARGET/.cursor/hooks.json" ]]; then
+      printf '%s\n' '{
+  "version": 1,
+  "hooks": {
+    "stop": [
+      {
+        "command": ".cursor/hooks/mc-dispatch-stop.py",
+        "timeout": 8,
+        "loop_limit": 3
+      }
+    ]
+  }
+}' > "$TARGET/.cursor/hooks.json"
+      echo "  + .cursor/hooks.json (stop hook)"
+    else
+      echo "  = .cursor/hooks.json already present — left untouched"
+    fi
     echo "  + .jarvis/kit already staged for hats/commands (same as Claude/generic)"
     ;;
   generic)

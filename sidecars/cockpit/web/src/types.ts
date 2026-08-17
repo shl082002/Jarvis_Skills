@@ -72,4 +72,12 @@ export type CockpitState = {
     beat_fresh_seconds: number;
   };
   gauntlet?: { on: boolean; reason: string };
+  morning_open?: {
+    on: boolean;
+    hour: number;
+    minute: number;
+    note?: string;
+    backend?: string;
+    last_error?: string;
+  };
 };

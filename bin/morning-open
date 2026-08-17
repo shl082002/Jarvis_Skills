@@ -1,0 +1,153 @@
+#!/usr/bin/env python3
+"""Morning OPEN — portable clock job. Lights, recollect, discuss, Telegram ping.
+
+Does not Deploy, does not open an editor, does not BUILD.
+Workroom: JARVIS_WORKROOM or walk to .jarvis.
+"""
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
+import urllib.error
+import urllib.request
+from datetime import datetime, timezone
+from pathlib import Path
+
+
+def find_workroom() -> Path:
+    env = os.environ.get("JARVIS_WORKROOM", "").strip()
+    if env:
+        p = Path(env).expanduser()
+        if p.is_dir():
+            return p
+    here = Path(__file__).resolve()
+    for parent in here.parents:
+        wr = parent / ".jarvis"
+        if wr.is_dir() and (
+            (wr / "HANDOVER.md").is_file()
+            or (wr / "LEDGER.md").is_file()
+            or (wr / "TRACKER.md").is_file()
+        ):
+            return wr
+    raise SystemExit("morning-open: no workroom (set JARVIS_WORKROOM)")
+
+
+def load_env(wr: Path) -> dict[str, str]:
+    out: dict[str, str] = {}
+    path = wr / ".env"
+    if not path.is_file():
+        return out
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, val = line.split("=", 1)
+        out[key.strip()] = val.strip().strip('"').strip("'")
+    return out
+
+
+def clip(text: str, n: int) -> str:
+    text = text.strip()
+    if len(text) <= n:
+        return text
+    return text[: n - 1] + "…"
+
+
+def recollect(wr: Path) -> str:
+    bits = []
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    bits.append(f"# Morning OPEN — {now}\n")
+    bits.append("House woke on the clock. Mode is discuss. Wait for the principal.\n")
+    for name in ("HANDOVER.md", "TRACKER.md", "LEDGER.md"):
+        path = wr / name
+        if path.is_file():
+            body = path.read_text(encoding="utf-8", errors="replace")
+            bits.append(f"\n## {name}\n")
+            bits.append(clip(body, 1800))
+            bits.append("\n")
+    root = wr.parent
+    try:
+        log = subprocess.check_output(
+            ["git", "-C", str(root), "log", "--oneline", "-8"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=8,
+        )
+        if log.strip():
+            bits.append("\n## git (workspace)\n")
+            bits.append(log)
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return "".join(bits)
+
+
+def lights_on(wr: Path) -> None:
+    svc = wr / "bin" / "svc"
+    if not svc.is_file():
+        svc = wr / "kit" / "bin" / "svc"
+    if not svc.is_file():
+        print("morning-open: no svc — skip lights", flush=True)
+        return
+    subprocess.run(
+        [str(svc), "lights", "on"],
+        cwd=str(wr.parent),
+        timeout=120,
+        check=False,
+    )
+
+
+def write_mode(wr: Path) -> None:
+    path = wr / "MODE.md"
+    now = datetime.now(timezone.utc).isoformat()
+    path.write_text(
+        "# MODE — standing gear. Chat words still override.\n"
+        "mode: discuss\n"
+        f"updated_at: {now}\n"
+        "note: morning OPEN clock\n",
+        encoding="utf-8",
+    )
+
+
+def telegram_ping(wr: Path, preview: str) -> None:
+    env = {**os.environ, **load_env(wr)}
+    token = env.get("TELEGRAM_BOT_TOKEN", "").strip()
+    chat = env.get("TELEGRAM_CHAT_ID", "").strip()
+    if not token or not chat:
+        return
+    text = "Morning OPEN. Lights on, briefing in inbox/morning.md, mode discuss. Open Jarvis when you want to plan.\n\n" + clip(
+        preview, 800
+    )
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    data = json.dumps({"chat_id": chat, "text": text[:3500]}).encode()
+    req = urllib.request.Request(url, data=data, method="POST")
+    req.add_header("content-type", "application/json")
+    try:
+        urllib.request.urlopen(req, timeout=20).read()
+    except (urllib.error.URLError, OSError, TimeoutError) as exc:
+        print(f"morning-open: telegram skip — {type(exc).__name__}", flush=True)
+
+
+def main() -> None:
+    wr = find_workroom()
+    (wr / "inbox").mkdir(parents=True, exist_ok=True)
+    (wr / "logs").mkdir(parents=True, exist_ok=True)
+    body = recollect(wr)
+    (wr / "inbox" / "morning.md").write_text(body, encoding="utf-8")
+    write_mode(wr)
+    lights_on(wr)
+    telegram_ping(wr, body)
+    stamp = datetime.now(timezone.utc).isoformat()
+    log = wr / "logs" / "morning-open.log"
+    with log.open("a", encoding="utf-8") as fh:
+        fh.write(f"{stamp} ran\n")
+    print(f"morning-open: wrote {wr / 'inbox' / 'morning.md'}", flush=True)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as exc:
+        print(f"morning-open: {exc}", file=sys.stderr)
+        sys.exit(1)

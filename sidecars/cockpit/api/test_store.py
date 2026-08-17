@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 from dispatch import deploy_run, explain_run, stop_run, write_principal_reply
+from morning_open import read_morning
 from store import create_task, derive_occasion, list_tasks, update_task, upsert_run
 from tracker_sync import export_tracker, import_tracker_if_empty
 
@@ -87,6 +88,11 @@ class StoreTests(unittest.TestCase):
         on_disk = (self.wr / "dispatch.json").read_text(encoding="utf-8")
         self.assertIn("use port 3847", on_disk)
         self.assertIn("\"action\": \"reply\"", on_disk)
+
+    def test_morning_defaults_off(self) -> None:
+        state = read_morning(self.wr)
+        self.assertFalse(state["on"])
+        self.assertEqual(state["hour"], 6)
 
 
 if __name__ == "__main__":

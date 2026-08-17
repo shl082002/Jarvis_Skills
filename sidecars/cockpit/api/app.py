@@ -14,7 +14,7 @@ from watchfiles import Change, awatch
 from beat import write_beat
 from dispatch import deploy_run, explain_run, read_dispatch, stop_run, write_principal_reply
 from gauntlet_flag import read_gauntlet, set_gauntlet
-from mode import write_mode
+from morning_open import read_morning, set_morning
 from project import project
 from room import room
 from services import control, list_services
@@ -73,6 +73,7 @@ def compose() -> dict:
         room_state["dispatch"] = read_dispatch(wr)
         room_state["fleet"] = ["dum-e", "u", "jocasta", "friday", "edith", "pepper", "happy"]
         room_state["gauntlet"] = read_gauntlet(wr)
+        room_state["morning_open"] = read_morning(wr)
     else:
         room_state["tasks"] = []
         room_state["runs"] = []
@@ -83,6 +84,7 @@ def compose() -> dict:
         room_state["dispatch"] = None
         room_state["fleet"] = []
         room_state["gauntlet"] = {"on": False, "reason": ""}
+        room_state["morning_open"] = {"on": False, "hour": 6, "minute": 0}
     room_state["watching"] = room.watching
     return room_state
 
@@ -155,6 +157,21 @@ class GauntletIn(BaseModel):
 def set_gauntlet_switch(body: GauntletIn) -> dict:
     try:
         state = set_gauntlet(_workroom(), body.on, body.reason)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return {"ok": True, **state}
+
+
+class MorningIn(BaseModel):
+    on: bool
+    hour: int = 6
+    minute: int = 0
+
+
+@app.post("/api/morning-open")
+def set_morning_switch(body: MorningIn) -> dict:
+    try:
+        state = set_morning(_workroom(), body.on, body.hour, body.minute)
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     return {"ok": True, **state}
