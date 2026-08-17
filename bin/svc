@@ -15,9 +15,10 @@
 # Usage:
 #   svc list                      registry overview
 #   svc status [name]             live state of one/all services
-#   svc up <name>                 start + wait for health
-#   svc down <name>               stop (pidfile → port listener, cwd-guarded)
+#   svc up <name>|all             start + wait for health
+#   svc down <name>|all           stop (pidfile → port listener, cwd-guarded)
 #   svc restart <name>            down + up
+#   svc lights on|off             whole registry, including Mission Control
 #   svc logs <name> [n]           tail the captured log (default 50 lines)
 #
 # Laws (skills/services/SKILL.md): status before up · never kill a process
@@ -114,7 +115,20 @@ cmd_up() {
   local start; start="$(field "$name" cmd)"
   [[ -n "$start" ]] || die "no cmd registered for '$name'"
   echo "svc: starting $name — ($start) in $dir"
-  ( cd "$dir" && nohup bash -c "$start" >"$LOGS/$name.log" 2>&1 & echo $! >"$RUNDIR/$name.pid" )
+  python3 - "$dir" "$start" "$LOGS/$name.log" "$RUNDIR/$name.pid" <<'PY'
+import os, subprocess, sys
+d, cmd, log, pidp = sys.argv[1:5]
+os.chdir(d)
+logf = open(log, "ab")
+p = subprocess.Popen(
+    ["bash", "-c", "exec " + cmd],
+    stdin=subprocess.DEVNULL,
+    stdout=logf,
+    stderr=logf,
+    start_new_session=True,
+)
+open(pidp, "w").write(str(p.pid) + "\n")
+PY
 
   local deadline=$(( SECONDS + waits ))
   while (( SECONDS < deadline )); do
@@ -172,6 +186,22 @@ cmd_down() {
   status_one "$name"
 }
 
+cmd_up_all() {
+  local n rc=0
+  for n in $(names); do
+    cmd_up "$n" || rc=1
+  done
+  return "$rc"
+}
+
+cmd_down_all() {
+  local n rc=0
+  for n in $(names); do
+    cmd_down "$n" || rc=1
+  done
+  return "$rc"
+}
+
 cmd_logs() {
   local name="${1:?usage: svc logs <name> [n]}"
   known "$name" || die "unknown service '$name' (svc list)"
@@ -182,9 +212,22 @@ cmd_logs() {
 case "${1:-}" in
   list)    cmd_list ;;
   status)  cmd_status "${2:-}" ;;
-  up)      cmd_up "${2:-}" ;;
-  down)    cmd_down "${2:-}" ;;
+  up)
+    if [[ "${2:-}" == "all" ]]; then cmd_up_all
+    else cmd_up "${2:-}"; fi
+    ;;
+  down)
+    if [[ "${2:-}" == "all" ]]; then cmd_down_all
+    else cmd_down "${2:-}"; fi
+    ;;
   restart) cmd_down "${2:-}" && cmd_up "${2:-}" ;;
+  lights)
+    case "${2:-}" in
+      on)  cmd_up_all ;;
+      off) cmd_down_all ;;
+      *)   die "usage: svc lights on|off" ;;
+    esac
+    ;;
   logs)    cmd_logs "${2:-}" "${3:-}" ;;
-  *)       sed -n '2,25p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 1 ;;
+  *)       sed -n '2,28p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac

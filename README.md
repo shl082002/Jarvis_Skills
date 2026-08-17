@@ -14,11 +14,10 @@ was paid for with an actual mistake or ratified from an actual win.
 
 ## The core idea
 
-An AI agent's context window is amnesia with good manners. Everything that matters must
-therefore live in **files**: what we know (memory), where things are (atlas), what
-branches exist (ledger), what was decided (chronicle), and what to do next (handover).
-The agent's job is to keep those files true; the human's job is to make the calls.
-Any agent that can read files can pick up the baton — mid-task, mid-day, mid-year.
+An AI agent's context window is amnesia with good manners. **Doctrine and the baton
+live in files** (memory, atlas, ledger, chronicle, handover). **Runtime task identity**
+(Task, AgentRun, Event, Approval) lives in a portable SQLite file in the workroom.
+The agent's job is to keep both true; the human's job is to make the calls.
 
 Three loyalties, in order:
 
@@ -62,13 +61,25 @@ Jarvis_Skills/
 │   ├── playground/      reports protocol — keep the chat clean
 │   ├── council/         the dispatch playbook for the agent team
 │   ├── services/        the service registry — svc up/down/status, one file
-│   └── gauntlet/        several sessions in parallel: fronts, stones, the Collect
+│   ├── gauntlet/        several sessions in parallel: fronts, stones, the Collect
+│   ├── judgment-library/ on-demand mental-model cards (teach one topic)
+│   ├── qa/              evidence-first walkthrough (EDITH)
+│   ├── investigate/     no fix without a theory (JOCASTA)
+│   ├── review/          bugs that pass CI
+│   ├── ideate/          founder forcing questions (DISCUSS)
+│   ├── browse/          headed browser — Cursor MCP first
+│   ├── heimdall/        situation glance (files, not a second tracker)
+│   ├── voice/           local STT/TTS transport
+│   └── mission-control/ lights on/off including the board; Deploy is dispatch
+├── assets/learning/     ← judgment cards (md only; invoked via teach)
+├── sidecars/            ← cockpit (FastAPI + React) + voice notes (localhost)
 ├── commands/            ← thin slash-command wrappers over the skills
 └── adapters/            ← how to wire the kit into each harness
     ├── claude-code.md
     ├── cursor.md
     ├── generic.md
-    └── install.sh       one-shot installer (claude | cursor | generic)
+    ├── adding-surface.md  ← checklist: new skill/command stays multi-host
+    └── install.sh         one-shot installer (claude | cursor | generic)
 ```
 
 ## The workroom
@@ -84,9 +95,16 @@ project root — as its writable workroom:
 ├── LEDGER.md            the git branch ledger
 ├── TRACKER.md           the one list — open/blocked/parked commitments
 ├── HANDOVER.md          the live baton — current state + next first task
+├── kit/                 portable stage — agents, commands, skills, assets
+├── live/                optional heartbeats (Heimdall)
+├── inbox/               optional voice/sidecar utterances
+├── evidence/            browse/QA screenshots
 ├── chronicle/           YYYY-MM-DD/ dated plans, decisions, session closes
 └── reports/             full agent reports (the chat stays clean)
 ```
+
+`install.sh <claude|cursor|generic>` always fills `.jarvis/kit/`. Claude and Cursor
+add harness projections on top; they are not a second constitution.
 
 Everything else in the target project is **read-only until the principal says build**.
 

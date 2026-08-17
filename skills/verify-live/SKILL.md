@@ -18,6 +18,11 @@ Every claim about work carries an implicit rung. Name the rung honestly:
 | **COMPILED** | Typecheck/build/lint pass | "builds clean" |
 | **TESTED** | Automated tests exercise X and pass | "tests pass" |
 | **LIVE-VERIFIED** | The real running system was driven and X was observed (screenshot, response body, log line) | "verified live: <evidence>" |
+
+**LIVE-VERIFIED requires browser or real HTTP evidence** — a headed tab
+(`skills/browse/`) or a captured response body/log line from the running
+system. A description of what you would click is CLAIMED. Screenshot and
+note paths belong under `WORKROOM/reports/` or `WORKROOM/evidence/`.
 | **PRINCIPAL-VERIFIED** | The principal saw it work themselves | "done" |
 
 **"Done" belongs to the top two rungs only.** Tests passing ≠ done. The gap between

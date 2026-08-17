@@ -1,5 +1,5 @@
 ---
-description: Open, run, or close a gauntlet — several parallel sessions across shared repos, coordinated by a board and the Infinity Stones.
+description: Open, run, or close a gauntlet — ONLY if the principal declared one. Never self-start.
 ---
 
 Apply `skills/gauntlet/SKILL.md`. Determine which of the four you are being asked for
@@ -7,12 +7,16 @@ and do only that one.
 
 ## OPEN
 
+0. **Declaration gate.** If this message is not an explicit declare/open from the
+   principal, **do not open**. One-line recommend at most, then wait. Independent
+   tickets in one chat are not a gauntlet.
 1. **Check the work actually splits.** Independent initiatives — disjoint territory, no
    shared dependency chain. Steps of one thing are a pipeline, not a gauntlet: say so and
    stop.
 1b. **Do NOT pre-assign fronts.** A front is raised only when the principal asks for
-   one — never seeded with work you chose, never self-selected by a session. Opening a
-   gauntlet means arming the machinery and leaving the board empty. When he does name
+   one — never seeded with work you chose, never self-selected by a session, never
+   auto-claimed by SessionStart. Opening a gauntlet means arming the machinery and leaving
+   the board empty. When he does name
    one, it is a single command from any session, new or already running:
    `.jarvis/bin/gauntlet enlist <name> "<character>" <none|burst|heavy> "<territory>"`
    — which raises the front, seats that session, and writes its cold-boot brief. Name it

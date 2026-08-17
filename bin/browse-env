@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# browse-env — print a B= export for an *external* gstack browse CLI.
+# Does not vendor or download anything. Exit 1 if no binary is found.
+set -euo pipefail
+
+candidates=(
+  "${B:-}"
+  "$HOME/gstack/browse/dist/browse"
+  "$HOME/.local/bin/browse"
+)
+
+for c in "${candidates[@]}"; do
+  [[ -n "$c" && -x "$c" ]] || continue
+  printf 'export B=%q\n' "$c"
+  exit 0
+done
+
+echo "browse-env: no browse CLI found (looked in ~/gstack/browse/dist/browse)." >&2
+echo "Install gstack *outside* the product repo, then re-run. See skills/browse/references/daemon.md" >&2
+exit 1

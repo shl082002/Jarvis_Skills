@@ -7,7 +7,9 @@ trigger mechanism changes.
 ## Wiring
 
 1. **The charter → an always-on rule.**
-   Copy `JARVIS.md` to `.cursor/rules/00-jarvis-charter.mdc` with frontmatter:
+   Copy the **installed** `JARVIS.md` (project House Config) — not the kit
+   default if the project already has a charter — to
+   `.cursor/rules/00-jarvis-charter.mdc` with frontmatter:
 
    ```
    ---
@@ -35,9 +37,28 @@ trigger mechanism changes.
    including read-only reach, the report file to `.jarvis/reports/`, and the
    1–3-line wrap. The discipline is the point, not the process isolation.
 
-5. **The workroom is identical.** `.jarvis/` — same files, same formats. This is
-   the interoperability guarantee: a Claude Code session can close the day and a
-   Cursor session can boot from the same handover tomorrow, or vice versa.
+5. **The workroom is identical.** `.jarvis/` — same files, same formats. The
+   installer also stages `.jarvis/kit/` (agents, commands, skills, assets) so
+   Cursor hats and command words match Claude and generic. A Claude Code session
+   can close the day and a Cursor session can boot from the same handover
+   tomorrow, or vice versa.
+
+6. **Adding skills.** New `skills/` and `commands/` are globbed by `install.sh`.
+   New artifact *kinds* need `install.sh` + this file + `claude-code.md` +
+   `generic.md` in one commit. See `adapters/adding-surface.md`.
+
+7. **Sidecars.** Cockpit (`bin/cockpit open` → `127.0.0.1:3847`) and voice
+   (`inbox/`, `voice: off` until POLICY flips) live under `.jarvis/kit/sidecars/`.
+   Do not run `install.sh` just to peek at kit files — the checkout is enough.
+   Re-install only when the principal wants the live projection refreshed.
+
+8. **Morning OPEN + Cursor wake.** `bin/morning-open` is copied into `.jarvis/bin`
+   on install. Arm **Morning** on the board (Off default) — that writes a user
+   launchd job. Cursor also gets `.cursor/hooks/mc-dispatch-stop.py` for Deploy
+   and Telegram rulings (hooks.json created only if missing).
+
+9. **House Config.** If `JARVIS.md` already exists, install **never replaces**
+   it. Cursor’s always-on charter is copied from that project file.
 
 ## Cautions
 

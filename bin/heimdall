@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# heimdall — glance helper. The board is the React cockpit (no static HTML).
+set -euo pipefail
+
+_HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_PARENT="$(cd "$_HERE/.." && pwd)"
+if [[ -d "$_PARENT/sidecars/cockpit/api" ]]; then
+  KIT="$_PARENT"
+elif [[ -d "$_PARENT/kit/sidecars/cockpit/api" ]]; then
+  KIT="$_PARENT/kit"
+else
+  echo "heimdall: cockpit sidecar not found" >&2
+  exit 1
+fi
+
+usage() {
+  echo "usage: heimdall project [workroom] | serve [workroom] | open [workroom]" >&2
+  exit 2
+}
+
+find_workroom() {
+  local start="${1:-}"
+  if [[ -n "$start" ]]; then
+    echo "$(cd "$start" && pwd)"
+    return
+  fi
+  local d
+  d="$(pwd)"
+  while [[ "$d" != "/" ]]; do
+    if [[ -d "$d/.jarvis" ]]; then
+      echo "$d/.jarvis"
+      return
+    fi
+    d="$(dirname "$d")"
+  done
+  echo "heimdall: no .jarvis workroom found" >&2
+  exit 1
+}
+
+cmd="${1:-}"
+shift || true
+[[ -n "$cmd" ]] || usage
+
+case "$cmd" in
+  serve|open)
+    [[ -x "$_HERE/cockpit" ]] || { echo "heimdall: bin/cockpit missing" >&2; exit 1; }
+    exec "$_HERE/cockpit" "$cmd" "$@"
+    ;;
+  project)
+    WR="$(find_workroom "${1:-}")"
+    python3 "$KIT/sidecars/cockpit/api/project.py" "$WR"
+    ;;
+  *)
+    usage
+    ;;
+esac

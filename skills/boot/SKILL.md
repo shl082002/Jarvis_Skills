@@ -36,6 +36,11 @@ with a briefing — never with unrequested work.
 7. **The atlas**, if today's work enters a repo you haven't mapped in this
    session's head.
 
+8. **Gauntlet flag.** If `.jarvis/run/GAUNTLET_ACTIVE` is absent, you are **not**
+   in a gauntlet — one session, ordinary charter. Do not open one. If the flag
+   is present, say so in the briefing (declared by the principal); still do not
+   invent fronts.
+
 ## Then: brief, don't act
 
 Open a short **discussion** with the principal before jumping in:

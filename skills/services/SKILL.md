@@ -15,7 +15,9 @@ one registry file and one command — and gives the workshop's Ops Butler
 - **`.jarvis/services.yml`** — the registry. One entry per runnable service:
   where it lives, how it starts, which port it owns, how to know it's healthy.
 - **`.jarvis/bin/svc`** — the butler script (installed by the kit):
-  `svc list | status [name] | up <name> | down <name> | restart <name> | logs <name> [n]`
+  `svc list | status [name] | up <name>|all | down <name>|all | restart <name> | lights on|off | logs <name> [n]`
+
+**Lights:** `svc lights on` / `svc lights off` is the whole registry, **including Mission Control (`cockpit` :3847)**. HAPPY must not skip the board on a house sleep. The face still refuses to Down itself; HAPPY stops it via svc.
 - **`.jarvis/logs/<name>.log`** + **`.jarvis/run/<name>.pid`** — captured
   output and launch pids for everything svc starts.
 

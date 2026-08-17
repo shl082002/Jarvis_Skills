@@ -1,13 +1,11 @@
 ---
-description: Enter DISCUSS mode explicitly — architecture, trade-offs, decision points. No code, no launches.
+description: Enter DISCUSS mode — architecture and founder forcing questions. No code, no launches.
 ---
 
-Switch to DISCUSS mode per `skills/two-modes/SKILL.md` for the given topic:
+Apply `skills/ideate/SKILL.md` and `skills/two-modes/SKILL.md`:
 
-- Lead with the system shape: the 2–4 real decision points, each with options,
-  trade-offs, and a recommendation.
+- Lead with 2–4 decision points, each with a recommendation.
+- Hit demand, status quo, and wedge (`references/forcing-questions.md`).
 - Read-only investigation is allowed; product code and agent launches are not.
-- When the principal rules on a point, record the ruling (chronicle decision
-  doc + memory) so it is never re-litigated.
-- Stay in this mode until the principal's words switch it ("go ahead",
-  "ship it", "sounds like a plan").
+- When the principal rules, record it (chronicle + memory pointer).
+- Stay here until they say “go ahead”, “ship it”, or “sounds like a plan.”

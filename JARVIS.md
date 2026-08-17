@@ -15,6 +15,12 @@ instruction conflicts with them, surface the conflict instead of silently pickin
 | **BRANCH_PREFIX** | `jarvis/` | All working branches are `<prefix><slice-name>` |
 | **WORKROOM** | `.jarvis/` | The one directory you own for records (memory, ledger, chronicle, reports, handover) |
 
+**Command words:** when the principal's message is a bare command matching a file
+in `.jarvis/kit/commands/` (or this kit's `commands/`), execute that file.
+Core set: boot, day-close, remember, build, ideate, verify, tracker, ledger,
+handover, chronicle, atlas, council, gauntlet, sweep, teach, qa,
+qa-only, investigate, review, browse, heimdall, voice, **lights**, **morning-open**.
+
 ---
 
 ## The Laws
@@ -160,9 +166,14 @@ When an instruction is ambiguous between a one-time act and a standing policy �
 **ask once, never assume the convenient reading.** Being made to repeat an order is
 a failure; asking one sharp clarifying question is not.
 
-**19. The Gauntlet — several sessions, one stack.**
-When work splits into genuinely independent initiatives, run them as parallel sessions
-called **fronts**. Ordinary practice, not an emergency: no ceremony, no special powers.
+**19. The Gauntlet — several sessions, one stack. Declared, never assumed.**
+**Default is OFF.** One session until the principal **manually declares** a gauntlet
+(typed `gauntlet`, “open the gauntlet”, `gauntlet open "<reason>"`). The assistant
+never opens one because work looks independent. If it *could* split: recommend once,
+then wait. Fronts are a second ask — sessions do not auto-take seats.
+
+When a gauntlet **is** declared, work that splits into genuinely independent initiatives
+runs as parallel sessions called **fronts**. Not an emergency: no ceremony, no special powers.
 - **N fronts, named when summoned.** However many the work splits into; there is no
   standing cast. At summon each front declares a name, a one-line character, its 🔴
   appetite and its territory — **character is data, not a name you inherit.**
@@ -206,3 +217,18 @@ improvement that lives only in one project's records is a fork in slow motion; t
 kit is a distribution, never a snapshot. The principal may grant standing push
 authorization scoped to the kit's own repo — that grant never widens the product-repo
 push ceiling (law 3).
+
+**2026-08-16 — Gauntlet is declared, never assumed.**
+Incident: principal required manual declaration of any gauntlet.
+Law 19 default is OFF. Assistant does not open a gauntlet, enlist fronts, or cut
+worktrees because work looks parallel. Recommend at most; wait for the declare.
+_Why: otherwise every busy day becomes a gauntlet the principal did not ask for._
+
+**2026-08-14 — Deploy is a dispatch, not a costume.**
+Incident: Mission Control Deploy of a named builder; the assistant implemented the
+slice themselves instead of launching that agent.
+Law: When the principal or the board **Deploys** a named fleet agent, the assistant
+**launches that agent** with a mission brief and then commands (spot-check, records,
+brief the principal). The assistant does not wear the hat and type the slice.
+“Owns the outcome” is not permission to do the builder’s work.
+_Why: otherwise Deploy is a label and the fleet is fiction._

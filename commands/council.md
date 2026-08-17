@@ -6,7 +6,8 @@ Dispatch per `skills/council/SKILL.md`:
 
 1. Pick the agent by job shape: DUM-E (where/what) · U (records audit) ·
    JOCASTA (why) · FRIDAY (locked build) · EDITH (live verification — ONLY on
-   the principal's explicit ask) · PEPPER (customer eyes).
+   the principal's explicit ask) · PEPPER (customer eyes) · HAPPY (services /
+   lights, including Mission Control).
 2. Compose the full brief: mission + verdict shape, numbered
    questions/slices, context pointers (plan docs, prior report paths, atlas,
    landmines), environment facts, boundaries.
